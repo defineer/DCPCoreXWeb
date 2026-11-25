@@ -1,0 +1,63 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build DCPCoreXWeb",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoLogo",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "RemoteSigned",
+                "-File",
+                "${workspaceFolder}/.vscode/start-vite.ps1",
+                "-Build"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Start DCPCoreXWeb Vite",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoLogo",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "RemoteSigned",
+                "-File",
+                "${workspaceFolder}/.vscode/start-vite.ps1"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "NO_COLOR": "1",
+                    "FORCE_COLOR": "0"
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "dcpcorexweb-vite",
+                "pattern": {
+                    "regexp": "^(.+)\\((\\d+),(\\d+)\\):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "message": 4
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^DCPCoreXWeb: checking Vite$",
+                    "endsPattern": "^DCPCoreXWeb: Vite already running$|^.*\\bLocal:\\s+http://127\\.0\\.0\\.1:5174/?\\s*$"
+                }
+            }
+        }
+    ]
+}

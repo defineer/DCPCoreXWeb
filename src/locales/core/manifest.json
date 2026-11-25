@@ -1,0 +1,8 @@
+{
+  "version": "core-checkout-snapshot-2026-11-23",
+  "source": "DCPCoreX/Src/Common/DCPCore.Common/Resources/Languages",
+  "sha256": {
+    "en-US.json": "3bdacbdeefd796836695eae681a228558a4e3eb6782c3f12489547e153c0ca43",
+    "tr-TR.json": "8e8f44c1a24783e782e72ed371309bdefb1292b2b7a3bf0a807b19d2862efa52"
+  }
+}

@@ -1,0 +1,8 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+	<!-- Back person -->
+	<path fill="currentColor" d="M4 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+	<path fill="currentColor" d="M1 13a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2H1v-2Z"/>
+	<!-- Front person -->
+	<path fill="currentColor" d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+	<path fill="currentColor" d="M6 13.5A2.5 2.5 0 0 1 8.5 11h3a2.5 2.5 0 0 1 2.5 2.5V14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-.5Z"/>
+</svg>
