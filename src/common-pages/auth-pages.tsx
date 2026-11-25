@@ -1,17 +1,15 @@
 import { useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, KeyRound } from 'lucide-react';
-import { useSession, getLoginChallenge, isOtpChallenge, LoginChallengeFailure, safeReturnPath } from '@/app/session';
+import { KeyRound } from 'lucide-react';
+import { useSession, isOtpChallenge, LoginChallengeFailure, safeReturnPath } from '@/app/session';
 import { changePassword } from '@/app/workspace-api';
-import { genericResponse } from '@/shared/contracts';
-import { confirmCommand } from '@/shared/http';
 import { useGlobalization } from '@/shared/globalization';
 import { Button, Field, Modal, Panel } from '@/shared/ui/primitives';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page, StatusPanel } from '@/shared/ui/page';
 import { ClosePageButton, ToolbarBar } from '@/shared/ui/toolbar';
 import { toast } from '@/shared/ui/toasts';
-import { focusInvalid, useEditForm, type FormErrors } from '@/shared/forms';
+import { focusInvalid, useEditForm } from '@/shared/forms';
 
 export function LoginPage() {
   const { state, restore, login } = useSession();
@@ -115,39 +113,12 @@ export function LoginPage() {
 }
 
 export function ResetPasswordPage() {
-  const { http } = useSession();
   const { t } = useGlobalization();
-  const navigate = useNavigate();
-  const [sent, setSent] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const form = useEditForm({ email: '' });
-
-  async function send(email: string) {
-    const challenge = await getLoginChallenge(http);
-    confirmCommand(await http.json('/api/userservice/resetpassword', genericResponse,
-      { method: 'POST', csrf: challenge.csrfToken, body: { email }, protected: false }));
-    setSent(true);
-  }
   return <Page id="ResetPassword" title={t('Page.ResetPassword')}>
-    {sent ? <p role="status">{t('Auth.ResetSent')}</p> : <form noValidate className="grid gap-4" onSubmit={event => {
-      event.preventDefault();
-      setFailed(false);
-      void form.submit(({ email }): FormErrors => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-        ? {} : { email: t('Common.Invalid') }, ({ email }) => send(email.trim()), () => setFailed(true));
-    }}>
-      <div className="workspace-fields workspace-compact-fields">
-        <Field label={t('Field.Email')} type="email" autoComplete="email" value={form.values.email}
-          onChange={value => form.change('email', value)} error={form.errors.email} />
-      </div>
-      {failed && <p role="alert" className="text-sm text-destructive">{t('Common.Failed')}</p>}
-      <ToolbarBar>
-        <Button type="submit" variant="ghost" className="workspace-toolbar-button" disabled={form.pending}><KeyRound />{t('Page.ResetPassword')}</Button>
-        <Button variant="ghost" className="workspace-toolbar-button" onClick={() => navigate('/login')} disabled={form.pending}>
-          <ChevronLeft />{t('Close', undefined, 'Core')}
-        </Button>
-      </ToolbarBar>
-    </form>}
-    {sent && <Link to="/login" className="text-sm font-medium text-primary hover:underline">{t('Page.Login')}</Link>}
+    <div className="grid gap-4">
+      <p>{t('Auth.ResetUnavailable')}</p>
+      <Link to="/login" className="justify-self-start text-sm font-medium text-primary hover:underline">{t('Page.Login')}</Link>
+    </div>
   </Page>;
 }
 

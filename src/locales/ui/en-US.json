@@ -28,7 +28,7 @@
   "Auth.Code": "Verification code",
   "Auth.Verify": "Verify",
   "Auth.OtpFailed": "The verification code is invalid or expired.",
-  "Auth.ResetSent": "If the account is eligible, reset instructions will be sent.",
+  "Auth.ResetUnavailable": "Online password recovery is currently unavailable. Contact your administrator for help accessing your account.",
   "Auth.Limited": "Change your password to continue.",
   "Auth.Remaining": "Your session will expire soon.",
   "Auth.Revocation": "You were signed out. Server revocation could not be confirmed.",

@@ -28,7 +28,7 @@
   "Auth.Code": "Doğrulama kodu",
   "Auth.Verify": "Doğrula",
   "Auth.OtpFailed": "Doğrulama kodu geçersiz veya süresi dolmuş.",
-  "Auth.ResetSent": "Hesap uygunsa parola sıfırlama talimatları gönderilecektir.",
+  "Auth.ResetUnavailable": "Çevrimiçi parola kurtarma şu anda kullanılamıyor. Hesabınıza erişmek için yöneticinizle iletişime geçin.",
   "Auth.Limited": "Devam etmek için parolanızı değiştirin.",
   "Auth.Remaining": "Oturumunuzun süresi yakında dolacak.",
   "Auth.Revocation": "Oturum kapatıldı. Sunucudaki iptal doğrulanamadı.",

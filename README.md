@@ -50,7 +50,7 @@ Build before calling `pnpm test:browser`. Use `DCP_BROWSER_CHANNEL=msedge` to se
 ## Integration decisions and release checks
 
 - Verify live React sign-in against the running Core Service. The fixture suite exercises the React UI with temporary browser interception.
-- The browser password recovery flow expects an approved anonymous reset facade operation with a pre-login CSRF context. Confirm that binding with Security.
+- Browser password recovery is unavailable. Before enabling it, the browser facade must verify a short-lived, single-use proof of mailbox ownership before changing a password. Keep the legacy email-only reset action outside the browser surface.
 - UserList exports the currently displayed page and requires the explicit `WebExportUsers` grant. The reviewed seed did not define that grant. Align that action with the backend authorization catalog before live export acceptance. The PDF export is a raster table so Turkish characters retain their appearance.
 - Remember Me is omitted until a supported browser-session preference exists. No credential storage is used.
 - The current backend views expose audit actor IDs in UserEdit. Display names and the richer legacy application metadata require approved public projections. The current About page shows the frontend version.

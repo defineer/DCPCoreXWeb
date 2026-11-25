@@ -43,7 +43,6 @@ async function mockApi(page: Page, options: { authenticated?: boolean; denied?: 
   let limited = options.limited ?? false;
   let saves = 0;
   let deletes = 0;
-  let resets = 0;
   let passwordChanges = 0;
   await page.route('**/api/**', async route => {
     const request = route.request();
@@ -58,10 +57,6 @@ async function mockApi(page: Page, options: { authenticated?: boolean; denied?: 
         if (request.postDataJSON().otpCode !== '123456') return reply({ errorCode: 'OTP_REQUIRED', receiveTimeAsSeconds: 120 }, 428);
         authenticated = true;
         return reply({ ...signedIn, isLimitedSession: limited });
-      case '/api/userservice/resetpassword':
-        if (request.headers()['x-dcp-csrf'] !== 'fixture-prelogin') return reply({}, 403);
-        resets++;
-        return reply({ success: true });
       case '/api/userservice/changepassword':
         if (request.headers()['x-dcp-csrf'] !== 'fixture-session') return reply({}, 403);
         passwordChanges++;
@@ -108,7 +103,7 @@ async function mockApi(page: Page, options: { authenticated?: boolean; denied?: 
         return reply({}, 404);
     }
   });
-  return { saves: () => saves, deletes: () => deletes, resets: () => resets, passwordChanges: () => passwordChanges };
+  return { saves: () => saves, deletes: () => deletes, passwordChanges: () => passwordChanges };
 }
 
 const responsiveSizes = [
@@ -199,7 +194,7 @@ for (const viewport of responsiveSizes) {
     await mockApi(page, { authenticated: false });
     await page.setViewportSize(viewport);
     await page.goto('/resetpassword');
-    await expectWithinViewport(page.getByRole('textbox'), viewport);
+    await expectWithinViewport(page.getByRole('link', { name: 'Oturum aç' }), viewport, true);
     await expectNoPageOverflow(page, viewport.width);
     await page.goto('/userlistpage');
     await page.getByLabel(/kullanıcı adı/i).fill('ada');
@@ -542,29 +537,22 @@ test('denies direct navigation without the configured page grant', async ({ page
   await expect(page.getByRole('table')).toHaveCount(0);
 });
 
-test('validates and submits a password reset with the pre-login challenge', async ({ page }) => {
-  const api = await mockApi(page, { authenticated: false });
-  await page.goto('/resetpassword');
-  const submit = page.getByRole('button', { name: 'Parolayı sıfırla' });
-  const email = page.getByRole('textbox', { name: 'E-posta' });
-  await email.fill('invalid');
-  await submit.click();
-  await expect(email).toHaveAttribute('aria-invalid', 'true');
-  expect(api.resets()).toBe(0);
-  await email.fill('example@example.test');
-  await submit.click();
-  await expect(page.getByText(/parola sıfırlama talimatları/)).toBeVisible();
-  expect(api.resets()).toBe(1);
-});
-
-test('does not show a successful password reset when the service route is missing', async ({ page }) => {
+test('shows recovery help without calling the legacy reset action', async ({ page }) => {
   await mockApi(page, { authenticated: false });
-  await page.route('**/api/userservice/resetpassword', route => route.fulfill({ status: 404, json: {} }));
-  await page.goto('/resetpassword');
-  await page.getByRole('textbox', { name: 'E-posta' }).fill('fixture@example.test');
-  await page.getByRole('button', { name: 'Parolayı sıfırla' }).click();
-  await expect(page.getByRole('alert')).toHaveText('İstek tamamlanamadı.');
-  await expect(page.getByText(/parola sıfırlama talimatları/)).toHaveCount(0);
+  const resetRequests: string[] = [];
+  page.on('request', request => {
+    if (/\/userservice\/resetpassword\/?$/i.test(new URL(request.url()).pathname)) resetRequests.push(request.url());
+  });
+
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'Parolanızı mı unuttunuz?' }).click();
+  await expect(page).toHaveURL(/\/resetpassword$/);
+  await expect(page.getByText(/parola kurtarma şu anda kullanılamıyor/)).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'E-posta' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Parolayı sıfırla' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Oturum aç' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(resetRequests).toEqual([]);
 });
 
 test('requires password change before a limited session can use the signed-in shell', async ({ page }) => {
