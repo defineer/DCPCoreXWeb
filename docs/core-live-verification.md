@@ -141,3 +141,9 @@ All 11 affected pages passed a fresh signed-in read-only retest. The owning logs
 ## Licence maintenance
 
 On the newer CoreService build, the signed-in Licence list returned three records. The edit form loaded the selected Licence’s existing application mapping and seven application choices. The New Licence form kept Add Application disabled before the first save. The Delete confirmation opened and was cancelled. The live check submitted no writes. Chrome fixtures cover creating a Licence, saving its mappings, rejecting duplicate choices, and deleting the Licence.
+
+## Shared Documents and Workflow retest on 26 November 2026
+
+React and nine application services were rebuilt and restarted. Workflow Service initially received HTTP 502 from the gateway during its startup authentication. After CoreService became reachable through the gateway, restarting Workflow succeeded and all nine service ports were listening.
+
+After sign-in through React on port 5174, User Edit opened Documents and Refresh loaded the grid. CoreService and Document Service both recorded HTTP 200 for the list operation. Workflow Service returned HTTP 200 for the signed-in Inbox, including the All status filter. The live Inbox had no work items. Batch uploads and Complete and Cancel were exercised with fixtures. Live writes, populated workflow targets, SQL execution and Release/HTTPS are still unverified.

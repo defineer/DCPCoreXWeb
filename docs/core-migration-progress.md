@@ -50,11 +50,16 @@ The SQL Client lists approved names from `BrowserReport:ConnectionKeys` in Repor
 | Case | Finding |
 | --- | --- |
 | Queue item and runtime table row saves | React shows New and Edit under separate grants. Data Management's upsert requires both grants, so either action can be offered to a user whose save would be forbidden. |
-| Document IDs | Document Service returns a `long`. The React document-list request uses ordinary JSON parsing before a safe-integer check. A numeric document ID above `Number.MAX_SAFE_INTEGER` can fail decoding the entire list. |
-| Workflow Open | The action checks that the server-supplied URL is local. It can still navigate to the missing page when that URL has no matching React route. Actual work-item targets need validation with populated data. |
-| Legacy feature parity | Customer creation and first-administrator provisioning, Customer List export, configuration value-version editing and deletion, and broader event record and AI detail access are incomplete or deliberately limited. See the group inventory for applicable policy constraints. |
+| Documents and Workflow | The document ID parser and Workflow Open route checks were fixed in the shared component stage. Signed-in Documents list and Refresh and Workflow Inbox returned HTTP 200. The live Inbox had no work items. Live document writes, actual work-item targets and transitions remain unverified. |
+| Legacy feature parity | Customer creation and first-administrator provisioning under CONF-043, Customer List export, and configuration value-version editing and deletion remain incomplete. Event Record exports cover the current result page. Cross-customer and raw event access and raw AI command detail require approved projections or access rules. Duplicate role/element grants are read-only in Access Models. |
 | Release and HTTPS | The current live evidence applies to Debug. Independent owner projects still target libraries in Release. The installed HTTPS environment must supply the exact browser origin and validator authority for the owning services. No end-to-end Release or HTTPS retest was performed. |
 | SQL Client | The Report Service connection lookup passed. The browser connection allowlist was empty, so SQL execution remains unverified. |
+
+## Shared Documents and Workflow acceptance on 26 November 2026
+
+- User Edit opens the reusable Documents dialog with its existing scoped adapter. The dialog supports exact 64-bit document IDs, metadata, Refresh and multi-file selection with individual results.
+- Workflow Inbox uses shared History and Transition dialogs. Workflow Service supplies and validates Complete and Cancel destinations. Open checks registered routes and page access before navigating.
+- TypeScript, lint, the React production build, 18 unit tests and 82 Chrome fixture tests passed. Fixtures covered the shared dialogs on mobile portrait, short landscape, tablet and desktop, and exercised exact IDs, mixed upload outcomes and Complete and Cancel submission.
 
 ## Earlier verification before the live rollout
 
