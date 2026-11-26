@@ -40,13 +40,13 @@ export function Toolbar({ actions, operation }: { actions: ToolbarAction[]; oper
     void action.run?.();
   }
   return <ToolbarBar>
-    {actions.filter(eligible).map(action => <div key={action.key} className="relative">
+    {actions.filter(eligible).map(action => <div key={action.key} className="workspace-toolbar-item">
       <Button variant="ghost" className="workspace-toolbar-button" disabled={action.enabled === false}
         aria-label={action.accessibleLabel} title={action.accessibleLabel}
         aria-expanded={action.actions ? expanded === action.key : undefined} onClick={() => invoke(action)}>
         {action.icon}{action.label}{action.actions && <ChevronDown className="workspace-toolbar-caret" />}
       </Button>
-      {action.actions && expanded === action.key && <div className="absolute left-0 top-full z-20 mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-card p-1 shadow-lg"
+      {action.actions && expanded === action.key && <div className="workspace-toolbar-menu z-20 mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-card p-1 shadow-lg"
         onKeyDown={event => { if (event.key === 'Escape') setExpanded(undefined); }}>
         {action.actions.filter(eligible).map(child => <Button key={child.key} variant="ghost"
           className="justify-start" disabled={child.enabled === false} onClick={() => invoke(child)}>{child.icon}{child.label}</Button>)}

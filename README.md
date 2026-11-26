@@ -14,7 +14,7 @@ pnpm test
 pnpm build
 ```
 
-Set `DCP_API_UPSTREAM` to the local Core Service origin in `.env.development.local` or in the environment that starts Vite. A process environment value takes precedence. The local setup uses Core Service at `http://127.0.0.1:9100` and Vite at `http://127.0.0.1:5174`. Vite forwards `/api` requests with their paths intact.
+Set `DCP_API_UPSTREAM` to the local CoreService origin in `.env.development.local` or in the environment that starts Vite. A process environment value takes precedence. The local setup uses CoreService on port 9100 and Vite on port 5174. Vite preserves canonical API paths and routes the independent service prefixes to the corresponding local owner ports.
 
 React uses `GET /api/session`, `POST /api/session/login`, and `POST /api/session/logout`. Core Service reuses the credential and OTP logic behind Blazor's `POST /UserService/validateuser`. In development, the Core Service browser origin defaults to `http://127.0.0.1:5174`. Set `BrowserSession__Origin` to the exact browser origin for HTTPS. Sessions are held in memory in the single Core Service process, so a restart requires signing in again.
 

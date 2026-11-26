@@ -5,6 +5,7 @@ import { localize, createGlobalization } from '@/shared/globalization';
 import { assertApiPath, confirmCommand } from '@/shared/http';
 import { createCsv, createWorkbook } from '@/shared/export';
 import { safeReturnPath, sessionDeadline } from '@/app/session';
+import { localDateInput, localDateInstant, localDateTimeInput, localDateTimeInstant } from '@/shared/zoned-dates';
 
 describe('forms', () => {
   it('clears dirty state after the original value is restored', () => {
@@ -32,6 +33,18 @@ describe('globalization', () => {
   });
   it('does not move a calendar date to the previous day in a negative time zone', () => {
     expect(createGlobalization('en-US', 'America/Los_Angeles').date('2000-01-01')).toContain('Jan 1, 2000');
+  });
+  it('preserves an unchanged membership instant and rejects ambiguous or missing local times', () => {
+    const zone = 'Europe/Berlin';
+    const saved = '2026-10-25T02:30:00.1234567+01:00';
+    expect(localDateTimeInput(saved, zone)).toBe('2026-10-25T02:30');
+    expect(localDateTimeInstant('2026-10-25T02:30', zone, saved)).toBe(saved);
+    expect(localDateTimeInstant('2026-10-25T02:30', zone)).toBeUndefined();
+    expect(localDateTimeInstant('2026-03-29T02:30', zone)).toBeUndefined();
+    expect(localDateTimeInstant('2026-03-29T03:30', zone)).toBe('2026-03-29T01:30:00.000Z');
+    expect(localDateInput(saved, zone)).toBe('2026-10-25');
+    expect(localDateInstant('2026-10-25', zone, saved)).toBe(saved);
+    expect(localDateInstant('2026-10-25', zone)).toBe('2026-10-24T22:00:00.000Z');
   });
 });
 

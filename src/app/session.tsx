@@ -50,17 +50,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     current.current = session;
     setState(session ? { stage: 'authenticated', session } : { stage: 'anonymous' });
   }, []);
-  const http = useMemo(() => new HttpClientManager(() => current.current?.csrfToken, () => {
-    revision.current++;
-    publish();
-  }, undefined, idleExpireAtUtc => {
-    const session = current.current;
-    if (!session) return;
-    const deadline = Date.parse(idleExpireAtUtc);
-    if (deadline > Date.parse(session.idleExpireAtUtc) && deadline <= Date.parse(session.expireAtUtc)) {
-      publish({ ...session, idleExpireAtUtc });
-    }
-  }), [publish]);
+  const http = useMemo(() => {
+    let checkingRevision: number | undefined;
+    const client = new HttpClientManager(() => current.current?.csrfToken, () => {
+      const attempt = revision.current;
+      if (!current.current || checkingRevision === attempt) return;
+      checkingRevision = attempt;
+      const invalidate = () => {
+        if (attempt !== revision.current) return;
+        revision.current++;
+        publish();
+      };
+      // An owning service can reject a request while the browser session remains active.
+      void client.json('/api/session', sessionView, { protected: false }).then(session => {
+        if (sessionDeadline(session) <= Date.now()) invalidate();
+      }).catch(error => {
+        if (error instanceof ApiFailure && error.status === 401) invalidate();
+      }).finally(() => {
+        if (checkingRevision === attempt) checkingRevision = undefined;
+      });
+    }, undefined, idleExpireAtUtc => {
+      const session = current.current;
+      if (!session) return;
+      const deadline = Date.parse(idleExpireAtUtc);
+      if (deadline > Date.parse(session.idleExpireAtUtc) && deadline <= Date.parse(session.expireAtUtc)) {
+        publish({ ...session, idleExpireAtUtc });
+      }
+    });
+    return client;
+  }, [publish]);
 
   const load = useCallback((signal?: AbortSignal) =>
     http.json('/api/session', sessionView, { protected: false, signal }), [http]);

@@ -14,7 +14,7 @@ export class ApiFailure extends Error {
   }
 
   get code() {
-    return this.info.code ?? this.info.errorCode;
+    return this.info.code ?? this.info.errorCode ?? undefined;
   }
 }
 
@@ -25,6 +25,7 @@ interface RequestOptions {
   protected?: boolean;
   modifying?: boolean;
   signal?: AbortSignal;
+  exactIntegerFields?: readonly string[];
 }
 
 export function assertApiPath(path: string) {
@@ -96,7 +97,17 @@ export class HttpClientManager {
   }
 
   json<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
-    return this.request(path, options, async response => schema.parse(await response.json()));
+    return this.request(path, options, async response => {
+      if (!options.exactIntegerFields?.length) return schema.parse(await response.json());
+      const fields = new Set(options.exactIntegerFields);
+      const value = JSON.parse(await response.text(), (key: string, entry: unknown, context?: { source?: string }) => {
+        if (!fields.has(key) || typeof entry !== 'number') return entry;
+        if (context?.source && /^-?[0-9]+$/.test(context.source)) return context.source;
+        if (Number.isSafeInteger(entry)) return String(entry);
+        throw new ApiFailure('invalid-response');
+      });
+      return schema.parse(value);
+    });
   }
 
   file(path: string, options: RequestOptions = {}) {

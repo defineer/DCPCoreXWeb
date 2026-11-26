@@ -16,6 +16,9 @@ export interface PagedDataFilter {
   isDescending?: boolean;
 }
 
+export const recordStatus = { all: 0, active: 1, inactive: 2, deleted: 3 } as const;
+export type RecordStatus = typeof recordStatus[keyof typeof recordStatus];
+
 export const simpleData = z.object({ id: z.number().int(), name: z.string().nullish() });
 export const keyedData = simpleData.extend({ keyName: z.string().nullish() });
 export type SimpleDataView = z.infer<typeof simpleData>;
@@ -38,8 +41,8 @@ export const logoutView = z.object({ localClosed: z.boolean(), revocationStatus:
 
 export const exceptionResponse = z.object({
   challenge: browserChallengeView.optional(),
-  code: z.string().optional(), errorCode: z.union([z.string(), z.number()]).optional(),
-  message: z.string().optional(), correlationId: z.string().optional(),
-  userFriendlyMessage: z.string().optional(), receiveTimeAsSeconds: z.number().positive().optional(),
+  code: z.string().nullish(), errorCode: z.union([z.string(), z.number()]).nullish(),
+  message: z.string().nullish(), correlationId: z.string().nullish(),
+  userFriendlyMessage: z.string().nullish(), receiveTimeAsSeconds: z.number().positive().optional(),
   errors: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
 });

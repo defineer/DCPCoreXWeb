@@ -40,13 +40,13 @@ export function Field({ label, value, onChange, error, valid, ...props }: {
   </label>;
 }
 
-export function SelectField({ label, value, options, onChange, error, disabled, valid }: {
+export function SelectField({ label, value, options, onChange, error, disabled, valid, hideLabel }: {
   label: string; value: string | number; options: Array<{ value: string | number; label: string }>;
-  onChange: (value: string) => void; error?: string; disabled?: boolean; valid?: boolean;
+  onChange: (value: string) => void; error?: string; disabled?: boolean; valid?: boolean; hideLabel?: boolean;
 }) {
   const id = useId();
   return <label className="workspace-field grid gap-1.5 text-sm font-medium" htmlFor={id}>
-    <span>{label}</span>
+    <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
     <select id={id} value={value} disabled={disabled} aria-invalid={Boolean(error)} data-valid={valid && !error || undefined}
       aria-describedby={error ? id + '-error' : undefined} className={controlClass} onChange={e => onChange(e.target.value)}>
       {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -55,12 +55,26 @@ export function SelectField({ label, value, options, onChange, error, disabled, 
   </label>;
 }
 
-export function CheckField({ label, value, onChange, disabled }: {
-  label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean;
+export function TextAreaField({ label, value, onChange, error, readOnly, maxLength, rows = 4 }: {
+  label: string; value: string; onChange: (value: string) => void; error?: string; readOnly?: boolean;
+  maxLength?: number; rows?: number;
+}) {
+  const id = useId();
+  return <label className="workspace-field grid gap-1.5 text-sm font-medium" htmlFor={id}>
+    <span id={id + '-label'}>{label}</span>
+    <textarea id={id} rows={rows} value={value} readOnly={readOnly} maxLength={maxLength} aria-invalid={Boolean(error)}
+      aria-labelledby={id + '-label'}
+      aria-describedby={error ? id + '-error' : undefined} className={controlClass} onChange={event => onChange(event.target.value)} />
+    {error && <span id={id + '-error'} className="text-destructive">{error}</span>}
+  </label>;
+}
+
+export function CheckField({ label, value, onChange, disabled, hideLabel }: {
+  label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean; hideLabel?: boolean;
 }) {
   return <label className="flex min-h-10 items-center gap-2 text-sm font-medium">
     <input type="checkbox" className="size-4 accent-primary" checked={value} disabled={disabled}
-      onChange={e => onChange(e.target.checked)} />{label}
+      onChange={e => onChange(e.target.checked)} /><span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
   </label>;
 }
 

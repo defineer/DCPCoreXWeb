@@ -127,7 +127,7 @@ export function ListPage({ tools, query, resultsTitle, split, children }: {
   return <>
     {tools}
     <div className={split ? 'workspace-list-split' : 'grid gap-2'}>
-      <PageGroup title={t('Query', undefined, 'Core')}>{query}</PageGroup>
+      {query && <PageGroup title={t('Query', undefined, 'Core')}>{query}</PageGroup>}
       <PageGroup title={resultsTitle}>{children}</PageGroup>
     </div>
   </>;

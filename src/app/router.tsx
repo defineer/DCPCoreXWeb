@@ -5,6 +5,7 @@ import { AboutPage, ContactPage, ErrorPage, HomePage, LicencePage } from '@/comm
 import { ProfilePage } from '@/common-pages/profile-page';
 import { PreferencesPage } from '@/common-pages/preferences-page';
 import { SessionsPage } from '@/common-pages/sessions-page';
+import { coreRoutes } from '@/modules/core/routes';
 
 export const router = createBrowserRouter([{ element: <RootLayout />, errorElement: <ErrorPage kind="error" />,
   hydrateFallbackElement: <div role="status" className="p-6">DCPCoreX</div>, children: [
@@ -21,10 +22,10 @@ export const router = createBrowserRouter([{ element: <RootLayout />, errorEleme
     { path: '/contact', element: <ContactPage /> },
     { path: '/licence', element: <LicencePage /> },
     { path: '/about', element: <AboutPage /> },
-    { path: '/userlistpage', lazy: async () => {
-      const { UserList } = await import('@/modules/core/users/user-list');
-      return { Component: () => <FeatureGate pageKey="WebUserList"><UserList /></FeatureGate> };
-    } },
+    ...coreRoutes.map(({ pageKey, path, load }) => ({ path, lazy: async () => {
+      const CorePage = await load();
+      return { Component: () => <FeatureGate pageKey={pageKey}><CorePage /></FeatureGate> };
+    } })),
   ] },
   { path: '/error', element: <ErrorPage kind="error" /> },
   { path: '/access-denied', element: <ErrorPage kind="denied" /> },

@@ -7,9 +7,12 @@ import { Field, FormGroup, SelectField } from './ui/primitives';
 
 const text = z.string().nullish();
 const id = z.number().int();
+const genderNames = { NotSpecified: 0, Male: 1, Female: 2 } as const;
+const genderCode = z.union([z.literal(0), z.literal(1), z.literal(2), z.enum(['NotSpecified', 'Male', 'Female'])])
+  .transform(value => typeof value === 'number' ? value : genderNames[value]);
 export const contactSchema = z.object({
   id, userName: text, nameSurname: text, email: text, email2: text, phone: text, phone2: text,
-  gender: id, birthDate: text, localBirthDate: text, birthDateWithOffset: text,
+  gender: genderCode, birthDate: text, localBirthDate: text, birthDateWithOffset: text,
   useCalendarBirthDate: z.boolean().optional(), countryId: id, countryRegionId: id, cityId: id,
   lastPasswordChangedDate: text, website: text, description: text,
 });
@@ -26,6 +29,34 @@ export async function loadPlaces(http: HttpClientManager, signal: AbortSignal): 
       http.json(prefix + route, z.array(place), { signal })),
   );
   return { countries, regions, cities };
+}
+
+export interface PlaceSelection { countryId: number; countryRegionId: number; cityId: number }
+
+export function PlaceFields({ values, places, errors, replace, changeCity, isModified, disabled }: {
+  values: PlaceSelection; places: Places; errors: FormErrors; replace: (value: PlaceSelection) => void;
+  changeCity: (cityId: number) => void;
+  isModified?: (key: keyof PlaceSelection) => boolean; disabled?: boolean;
+}) {
+  const { t } = useGlobalization();
+  const empty = { value: 0, label: '–' };
+  const options = (values: Place[], name: 'countryName' | 'regionName' | 'cityName') =>
+    [empty, ...values.map(place => ({ value: place.id, label: place[name] ?? place.name ?? String(place.id) }))];
+  const regions = places.regions.filter(region => region.countryId === values.countryId);
+  const cities = places.cities.filter(city => city.countryId === values.countryId
+    && (!values.countryRegionId || city.countryRegionId === values.countryRegionId));
+  return <>
+    <SelectField label={t('Field.Country')} value={values.countryId} disabled={disabled} error={errors.countryId}
+      valid={isModified?.('countryId') && values.countryId > 0} options={options(places.countries, 'countryName')}
+      onChange={country => replace({ countryId: Number(country), countryRegionId: 0, cityId: 0 })} />
+    <SelectField label={t('Field.Region')} value={values.countryRegionId} disabled={disabled || !values.countryId}
+      error={errors.countryRegionId} valid={isModified?.('countryRegionId')} options={options(regions, 'regionName')}
+      onChange={region => replace({ countryId: values.countryId, countryRegionId: Number(region), cityId: 0 })} />
+    <SelectField label={t('Field.City')} value={values.cityId} disabled={disabled || !values.countryId}
+      valid={isModified?.('cityId') && cities.some(city => city.id === values.cityId)}
+      error={errors.cityId} options={options(cities, 'cityName')}
+      onChange={city => changeCity(Number(city))} />
+  </>;
 }
 
 export function toEditorContact<T extends ContactValues>(value: T): T {
@@ -48,12 +79,6 @@ export function ContactFields<T extends ContactValues>({ values, places, errors,
   disabled?: boolean; includeAdmin?: boolean; generalDetails?: ReactNode;
 }) {
   const { t } = useGlobalization();
-  const empty = { value: 0, label: '–' };
-  const options = (values: Place[], name: 'countryName' | 'regionName' | 'cityName') =>
-    [empty, ...values.map(place => ({ value: place.id, label: place[name] ?? place.name ?? String(place.id) }))];
-  const regions = places.regions.filter(region => region.countryId === values.countryId);
-  const cities = places.cities.filter(city => city.countryId === values.countryId
-    && (!values.countryRegionId || city.countryRegionId === values.countryRegionId));
   const validation = validateContact(values, t('Common.Required'), t('Common.Invalid'));
   const valid = (key: keyof ContactValues) => isModified(key) && !validation[key];
   const textField = (key: 'userName' | 'nameSurname' | 'email' | 'email2' | 'phone' | 'phone2' | 'website' | 'description', label: string, type = 'text') =>
@@ -76,18 +101,8 @@ export function ContactFields<T extends ContactValues>({ values, places, errors,
       {textField('email', t('Field.Email'), 'email')}{textField('email2', t('Field.Email2'), 'email')}
       {textField('phone', t('Field.Phone'), 'tel')}{textField('phone2', t('Field.Phone2'), 'tel')}
       {includeAdmin && textField('website', t('Field.Website'), 'url')}
-      <SelectField label={t('Field.Country')} value={values.countryId} disabled={disabled} error={errors.countryId}
-        valid={valid('countryId')}
-        options={options(places.countries, 'countryName')}
-        onChange={country => replace({ ...values, countryId: Number(country), countryRegionId: 0, cityId: 0 })} />
-      <SelectField label={t('Field.Region')} value={values.countryRegionId} disabled={disabled || !values.countryId}
-        valid={valid('countryRegionId')}
-        options={options(regions, 'regionName')}
-        onChange={region => replace({ ...values, countryRegionId: Number(region), cityId: 0 })} />
-      <SelectField label={t('Field.City')} value={values.cityId} disabled={disabled || !values.countryId}
-        valid={valid('cityId') && cities.some(city => city.id === values.cityId)}
-        error={errors.cityId} options={options(cities, 'cityName')}
-        onChange={city => change('cityId', Number(city) as T['cityId'])} />
+      <PlaceFields values={values} places={places} errors={errors} isModified={valid} disabled={disabled}
+        replace={selection => replace({ ...values, ...selection })} changeCity={city => change('cityId', city as T['cityId'])} />
     </FormGroup>
   </>;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Files } from 'lucide-react';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
@@ -12,9 +12,10 @@ import { ToolbarBar } from '@/shared/ui/toolbar';
 import { ObjectDocuments } from '@/shared/ui/documents';
 import { toast } from '@/shared/ui/toasts';
 import { emptyUser, getUser, saveUser, type UserEditView } from './user-api';
+import { userActions, userPages } from './user-permissions';
 
 export type UserMode = 'new' | 'edit' | 'view';
-export interface UserEditorTarget { mode: UserMode; userId?: number }
+export type UserEditorTarget = { mode: 'new'; userId?: never } | { mode: 'edit' | 'view'; userId: number };
 
 export function UserEdit({ target, onClose, onSaved }: {
   target: UserEditorTarget; onClose: () => void; onSaved: (id: number) => void;
@@ -22,14 +23,13 @@ export function UserEdit({ target, onClose, onSaved }: {
   const { http } = useSession();
   const { t } = useGlobalization();
   const workspace = useWorkspace();
-  const parentPermission = workspace.canAction('WebUserList',
-    target.mode === 'new' ? 'WebAddUser' : target.mode === 'edit' ? 'WebEditUser' : 'WebViewUser');
-  const allowed = workspace.canPage('WebUserEdit') && parentPermission;
+  const allowed = workspace.canPage(userPages.editor) &&
+    workspace.canAction(userPages.list, userActions[target.mode]);
   const [savedId, setSavedId] = useState<number>();
   const load = useCallback(async (signal: AbortSignal) => {
     if (!allowed) return null;
     const [user, places] = await Promise.all([
-      target.mode === 'new' ? Promise.resolve(emptyUser()) : getUser(http, target.userId!, signal),
+      target.mode === 'new' ? Promise.resolve(emptyUser()) : getUser(http, target.userId, signal),
       loadPlaces(http, signal),
     ]);
     return { user, places };
@@ -56,23 +56,30 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
   const { t, date, error } = useGlobalization();
   const form = useEditForm(toEditorContact(original));
   const [documentsOpen, setDocumentsOpen] = useState(false);
+  const editor = useRef<HTMLFormElement>(null);
   const originalContact = useRef(original);
   const value = form.values;
-  const readOnly = mode === 'view' || !workspace.canAction('WebUserEdit', 'WebSaveUser') ||
-    (value.id > 0 && !workspace.canAction('WebUserList', 'WebEditUser'));
-  const canDocuments = value.id > 0 && workspace.canPage('WebObjectDocuments');
+  const readOnly = mode === 'view' || !workspace.canAction(userPages.editor, userActions.save) ||
+    (value.id > 0 && !workspace.canAction(userPages.list, userActions.edit));
+  const canDocuments = value.id > 0 && workspace.hasSharedPageGrant('WebObjectDocuments');
   const allows = {
-    view: workspace.canAction('WebUserEdit', 'WebViewObjectDocument.UserEdit'),
-    upload: !readOnly && workspace.canAction('WebUserEdit', 'WebAddObjectDocument.UserEdit'),
-    delete: !readOnly && workspace.canAction('WebUserEdit', 'WebDeleteObjectDocument.UserEdit'),
+    view: workspace.canAction(userPages.editor, 'WebViewObjectDocument.UserEdit'),
+    upload: !readOnly && workspace.canAction(userPages.editor, 'WebAddObjectDocument.UserEdit'),
+    delete: !readOnly && workspace.canAction(userPages.editor, 'WebDeleteObjectDocument.UserEdit'),
   };
   closeHook.current = () => {
     if (documentsOpen) setDocumentsOpen(false);
     else void form.requestClose(onClose);
   };
 
+  useEffect(() => {
+    const container = editor.current;
+    if (!container || readOnly || container.contains(document.activeElement)) return;
+    container.querySelector<HTMLInputElement>('input[name="userName"]')?.focus();
+  }, [readOnly]);
+
   async function submit() {
-    if (readOnly || !workspace.canAction('WebUserEdit', 'WebSaveUser')) return;
+    if (readOnly) return;
     await form.submit(snapshot => {
       const errors = validateContact(snapshot, t('Common.Required'), t('Common.Invalid'));
       const city = places.cities.find(candidate => candidate.id === snapshot.cityId);
@@ -92,7 +99,7 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
       if (!newerChanges && workspace.preferences?.saveAndCloseBehaviour) onClose();
     });
   }
-  return <form noValidate className="grid gap-2" onSubmit={event => { event.preventDefault(); void submit(); }}>
+  return <form ref={editor} noValidate className="grid gap-2" onSubmit={event => { event.preventDefault(); void submit(); }}>
     <ToolbarBar>
       {!readOnly && <Button type="submit" variant="ghost" className="workspace-toolbar-button" disabled={form.pending}><WorkspaceIcon name="save" />{t('Save', undefined, 'Core')}</Button>}
       {canDocuments && (allows.view || allows.upload || allows.delete) && <Button variant="ghost" className="workspace-toolbar-button"

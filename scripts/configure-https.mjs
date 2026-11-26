@@ -6,12 +6,12 @@ const existing = 'C:/Work/DCPCore/Src/Common/DCP.Core.Common/Docs/Deployment/Hos
 const host = process.env.DCP_HTTPS_HOST ?? 'dcpcore.com';
 const certificate = resolve(process.env.DCP_TLS_CERT ?? existing + '/dcpcore.crt');
 const privateKey = resolve(process.env.DCP_TLS_KEY ?? existing + '/dcpcore.key');
-if (!process.env.DCP_API_UPSTREAM) throw new Error('Set DCP_API_UPSTREAM to the local browser facade origin.');
+if (!process.env.DCP_API_UPSTREAM) throw new Error('Set DCP_API_UPSTREAM to the local CoreService origin.');
 const upstream = new URL(process.env.DCP_API_UPSTREAM);
 if (!/^[a-zA-Z0-9.-]+$/.test(host) || upstream.protocol !== 'http:' ||
     !['localhost', '127.0.0.1', '[::1]'].includes(upstream.hostname) ||
     upstream.pathname !== '/' || upstream.username || upstream.password || upstream.search || upstream.hash) {
-  throw new Error('Use a valid TLS hostname and a plain HTTP loopback facade origin.');
+  throw new Error('Use a valid TLS hostname and a plain HTTP loopback CoreService origin.');
 }
 const cert = new X509Certificate(await readFile(certificate));
 if (!cert.checkHost(host) || !cert.checkPrivateKey(createPrivateKey(await readFile(privateKey)))) {

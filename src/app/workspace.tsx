@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useSession } from './session';
 import { loadWorkspace, type ApplicationElementView, type WebUserPreferenceView } from './workspace-api';
 import { useResource } from '@/shared/resource';
+import { coreRoutes } from '@/modules/core/routes';
 
-export const featureRoutes = [{ pageKey: 'WebUserList', path: '/userlistpage', label: 'User.Management' }] as const;
+export const featureRoutes = coreRoutes.flatMap(({ path, label, pageKey }) => label ? [{ path, label, pageKey }] : []);
 export type FeatureRoute = typeof featureRoutes[number];
 export interface NavigationEntry { id: number; label: string; key?: string | null; page?: FeatureRoute; children: NavigationEntry[] }
 
@@ -53,6 +54,7 @@ interface WorkspaceValue {
   setPreferences: (preferences: WebUserPreferenceView) => void;
   menu: NavigationEntry[];
   canPage: (key: string) => boolean;
+  hasSharedPageGrant: (key: string) => boolean;
   canAction: (page: string, action: string) => boolean;
   pageOptions: (id: number) => Array<{ id: number; label: string }>;
   refresh: () => void;
@@ -94,6 +96,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const findPage = (key: string) => [...graph.values()].find(element =>
     element.keyName === key && element.elementTypeKeyName === 'WebForm' && element.accessRight > 0);
+  const hasSharedPageGrant = (key: string) => Boolean(ready?.elements.some(element =>
+    element.keyName === key && element.elementTypeKeyName === 'WebForm' && element.accessRight > 0));
   const canAction = (page: string, action: string) => {
     const parent = findPage(page);
     return Boolean(parent && [...graph.values()].some(node => node.parentElementId === parent.elementId &&
@@ -106,7 +110,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   return <WorkspaceContext.Provider value={{
     state: data.state, error: data.state === 'error' ? data.error : undefined, applications, applicationId,
-    preferences, setPreferences, menu, canPage: key => Boolean(findPage(key)), canAction, pageOptions,
+    preferences, setPreferences, menu, canPage: key => Boolean(findPage(key)), hasSharedPageGrant, canAction, pageOptions,
     selectApplication, refresh: data.refresh,
   }}>{children}</WorkspaceContext.Provider>;
 }

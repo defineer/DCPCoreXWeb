@@ -3,6 +3,7 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { z } from 'zod';
 import { genericResponse } from '@/shared/contracts';
 import { confirmCommand, HttpClientManager } from '@/shared/http';
 
@@ -16,6 +17,14 @@ function client(csrf?: string, unauthorized = vi.fn()) {
   return new HttpClientManager(() => csrf, unauthorized,
     (input, init) => fetch(new URL(String(input), origin), init));
 }
+
+it('preserves a 64-bit integer returned by a canonical service route', async () => {
+  handlers.use(http.get(origin + '/api/jsonobject/getjsonobject', () =>
+    new HttpResponse('{"id":9223372036854775807,"typeId":7}', { headers: { 'Content-Type': 'application/json' } })));
+  const result = await client().json('/api/jsonobject/getjsonobject', z.object({ id: z.string(), typeId: z.number() }),
+    { exactIntegerFields: ['id'] });
+  expect(result).toEqual({ id: '9223372036854775807', typeId: 7 });
+});
 
 it('adds CSRF and multipart fields to the same-origin modifying request', async () => {
   handlers.use(http.post(origin + '/api/userservice/saveuserpreferencesweb', async ({ request }) => {
@@ -41,4 +50,12 @@ it('clears local authority on protected authentication failure', async () => {
 it('rejects modifying requests with no CSRF before transport', async () => {
   await expect(client().json('/api/userservice/saveuser', genericResponse, { method: 'POST' }))
     .rejects.toMatchObject({ status: 401 });
+});
+
+it('retains the service message when optional exception fields are null', async () => {
+  handlers.use(http.get(origin + '/api/userservice/getuser', () => HttpResponse.json({
+    errorCode: null, message: null, correlationId: null, userFriendlyMessage: 'Record unavailable.',
+  }, { status: 400 })));
+  await expect(client('fixture-token').json('/api/userservice/getuser', genericResponse))
+    .rejects.toMatchObject({ status: 400, info: { userFriendlyMessage: 'Record unavailable.' } });
 });

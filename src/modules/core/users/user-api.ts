@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { commandWithData, genericResponse, pagedResponse, type PagedDataFilter } from '@/shared/contracts';
+import { commandWithData, genericResponse, pagedResponse, type PagedDataFilter, type RecordStatus } from '@/shared/contracts';
 import { ApiFailure, confirmCommand, withQuery, type HttpClientManager } from '@/shared/http';
 import { contactSchema, type ContactValues } from '@/shared/contact-fields';
 
@@ -9,7 +9,6 @@ const listRow = z.object({
   email: z.string().nullish(), isActive: z.boolean(),
 });
 export type UserListView = z.infer<typeof listRow>;
-export type RecordStatus = 0 | 1 | 2 | 3;
 export interface UserListQueryView { recordStatusQueryType: RecordStatus; dataFilter: PagedDataFilter }
 
 export const userEditSchema = contactSchema.extend({

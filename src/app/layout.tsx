@@ -159,7 +159,7 @@ function NavEntries({ entries, layout, nested = false }: {
     if (branch) branch.open = true;
   }, [activeBranch]);
 
-  return <ul ref={list} className={cn('m-0 list-none p-0', layout === 'top' && !nested && 'flex items-center gap-1',
+  return <ul ref={list} className={cn('m-0 list-none p-0', layout === 'top' && !nested && 'flex min-w-0 flex-wrap items-center gap-1',
     layout === 'left' && nested && 'pb-1')}>
     {entries.map(entry => {
       const label = entry.page ? t(entry.page.label) : entry.key === 'SecurityWebUI' ? t('App.SecurityManagement') : entry.label;
@@ -168,12 +168,14 @@ function NavEntries({ entries, layout, nested = false }: {
       const linkClass = layout === 'left' || iconOnly
         ? 'flex min-h-[2.4rem] items-center gap-3 px-3 text-sm text-sidebar-foreground aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-text'
         : popupItem;
-      return <li key={entry.id} className="relative">
+      const mobileTop = layout === 'top' && !nested;
+      return <li key={entry.id} className={mobileTop ? 'sm:relative' : 'relative'}>
         {entry.page && <NavLink to={entry.page.path} className={cn(linkClass, iconOnly && 'justify-center')}
           aria-label={label} title={iconOnly ? label : undefined} onClick={layout === 'left' ? undefined : closeMenus}>
           <span className="flex min-w-0 items-center gap-2">{icon}{!iconOnly && <span className="truncate">{label}</span>}</span>
         </NavLink>}
-        {entry.children.length > 0 && <details className="group/nav relative" data-current-branch={entry.id === activeBranch || undefined}>
+        {entry.children.length > 0 && <details className={cn('group/nav', mobileTop ? 'sm:relative' : 'relative')}
+          data-current-branch={entry.id === activeBranch || undefined}>
           <summary aria-label={label} title={iconOnly ? label : undefined}
             className={cn(summary, layout === 'left' || iconOnly ? 'text-sidebar-foreground'
               : nested ? 'hover:bg-primary-hover hover:text-primary-hover-foreground' : headerItemHover,
@@ -181,7 +183,8 @@ function NavEntries({ entries, layout, nested = false }: {
             {layout === 'left' ? <ChevronRight aria-hidden className="size-5 shrink-0 group-open/nav:rotate-90" /> : icon}
             {!iconOnly && <><span className="flex-1 truncate">{label}</span>{layout !== 'left' && <ChevronDown className="size-3.5" />}</>}
           </summary>
-          <div className={cn(popupNav && !nested ? popup : 'pl-2', iconOnly && 'left-full top-0 ml-1 mt-0')}>
+          <div className={cn(popupNav && !nested ? popup : 'pl-2', iconOnly && 'left-full top-0 ml-1 mt-0',
+            mobileTop && 'max-sm:inset-x-0')}>
             <NavEntries entries={entry.children} layout={popupNav ? 'top' : layout} nested />
           </div>
         </details>}
@@ -213,7 +216,7 @@ export function LeftMenu({ collapsed }: { collapsed: boolean }) {
 export function TopMenuNavigation() {
   const { menu } = useWorkspace();
   const { t } = useGlobalization();
-  return <nav aria-label={t('App.Workspace')} className="flex min-w-0 flex-wrap items-center gap-1">
+  return <nav aria-label={t('App.Workspace')} className="relative flex min-w-0 flex-wrap items-center gap-1 max-sm:order-last max-sm:w-full">
     <NavLink to="/index" className={cn('rounded-md px-3 py-2 text-sm aria-[current=page]:bg-white/20', headerItemHover)}>{t('Page.Home')}</NavLink>
     <NavEntries entries={menu} layout="top" />
   </nav>;
