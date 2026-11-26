@@ -250,6 +250,7 @@
   "AI.ChargedAmount": "Ücretlendirilen tutar",
   "AI.Cost": "Sağlayıcı maliyeti",
   "Workflow.Inbox": "İş akışı gelen kutusu",
+  "Workflow.Open": "Aç",
   "Workflow.History": "İş akışı geçmişi",
   "Workflow.Node": "Düğüm",
   "Workflow.ObjectId": "Nesne Kimliği",

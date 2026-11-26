@@ -9,28 +9,28 @@ const status = z.object({
   workflowObjectId: id, workflowObjectTransitionId: id, objectId: id, workflowTypeId: z.number().int(),
   objectTypeId: z.number().int(), objectTypeName: text, currentNodeName: text, currentStateName: text,
   responsibleUserName: text, responsibleRoleName: text, responsibleWorkgroupName: text, workPageUrl: text,
-  canExecuteActions: z.boolean(), isTerminalState: z.boolean(), isInitialState: z.boolean(), allowsDelegation: z.boolean(),
+  canExecuteActions: z.boolean(), canRestart: z.boolean().optional(), isTerminalState: z.boolean(),
+  isInitialState: z.boolean(), allowsDelegation: z.boolean(),
   currentStateId: z.number().int(), currentNodeNumber: z.number().int(), currentWorkflowTypeStateId: z.number().int(),
 });
 const transition = z.object({
   selectionId: z.number().int(), stateId: z.number().int(), workflowTypeStateId: z.number().int(), nodeNumber: z.number().int(),
-  workflowTypeStateTransitionId: z.number().int(), stateName: text, isDefault: z.boolean(),
+  workflowTypeStateTransitionId: z.number().int(), stateName: text, stateKeyName: text, isDefault: z.boolean(),
 });
 const history = z.object({
   workflowAction: z.union([z.string(), z.number()]), stateName: text, startDate: z.string(), userName: text,
   responsibleRoleName: text, responsibleWorkgroupName: text, executedByUserName: text, description: text,
 });
 export type WorkflowInboxItem = z.infer<typeof status>;
+export type WorkflowTarget = Pick<WorkflowInboxItem,
+  'workflowObjectId' | 'workflowObjectTransitionId' | 'objectId' | 'objectTypeId' | 'workflowTypeId' |
+  'currentStateId' | 'currentNodeNumber' | 'currentWorkflowTypeStateId' | 'canExecuteActions' | 'canRestart' |
+  'isTerminalState' | 'isInitialState' | 'allowsDelegation'>;
 export type WorkflowHistoryItem = z.infer<typeof history>;
-export const workflowActions = {
-  Next: { value: 0, grant: 'WebWorkflowInboxNext' },
-  Previous: { value: 1, grant: 'WebWorkflowInboxPrevious' },
-  Restart: { value: 2, grant: 'WebWorkflowInboxRestart' },
-  Cancelled: { value: 3, grant: 'WebWorkflowInboxCancel' },
-  Completed: { value: 4, grant: 'WebWorkflowInboxCompleted' },
-  Delegate: { value: 6, grant: 'WebWorkflowInboxDelegate' },
+export const workflowActionCode = {
+  Next: 0, Previous: 1, Restart: 2, Cancelled: 3, Completed: 4, Delegate: 6,
 } as const;
-export type WorkflowAction = keyof typeof workflowActions;
+export type WorkflowAction = keyof typeof workflowActionCode;
 type Transition = z.infer<typeof transition>;
 
 export function getInbox(http: HttpClientManager, workflowStatusListType: number, signal: AbortSignal) {
@@ -42,12 +42,13 @@ export function getInbox(http: HttpClientManager, workflowStatusListType: number
 export function getWorkflowHistory(http: HttpClientManager, workflowObjectId: string, signal: AbortSignal) {
   return http.json(withQuery(base + 'getobjectworkflowhistory', { workflowObjectId }), z.array(history), { signal });
 }
-export async function getWorkflowChoices(http: HttpClientManager, row: WorkflowInboxItem, action: WorkflowAction, signal: AbortSignal) {
+export async function getWorkflowChoices(http: HttpClientManager, row: WorkflowTarget, action: WorkflowAction, signal: AbortSignal) {
   let choices: Transition[] = [];
   let users: z.infer<typeof simpleData>[] = [];
-  if (action === 'Next' || action === 'Previous') {
-    choices = await http.json(withQuery(base + (action === 'Next' ? 'getnextstates' : 'getpreviousstates'), {
+  if (action === 'Next' || action === 'Previous' || action === 'Completed' || action === 'Cancelled') {
+    choices = await http.json(withQuery(base + (action === 'Previous' ? 'getpreviousstates' : 'getnextstates'), {
       workflowTypeId: row.workflowTypeId, currentStateId: row.currentStateId, nodeNumber: row.currentNodeNumber,
+      ...(action === 'Completed' || action === 'Cancelled' ? { workflowAction: workflowActionCode[action] } : {}),
     }), z.array(transition), { signal });
   } else if (action === 'Restart') {
     choices = [await http.json(withQuery(base + 'getinitialstate', { workflowTypeId: row.workflowTypeId }), transition, { signal })];
@@ -56,16 +57,15 @@ export async function getWorkflowChoices(http: HttpClientManager, row: WorkflowI
   }
   return { choices, users };
 }
-export async function changeWorkflow(http: HttpClientManager, row: WorkflowInboxItem, action: WorkflowAction,
+export async function changeWorkflow(http: HttpClientManager, row: WorkflowTarget, action: WorkflowAction,
   selected: Transition | undefined, newResponsibleUserId: number | undefined, description: string) {
-  const customState = action === 'Completed' ? 7 : action === 'Cancelled' ? 6 : row.currentStateId;
   confirmCommand(await http.json(base + 'changeworkflowstate', genericResponse, {
     method: 'POST',
     body: {
-      workflowAction: workflowActions[action].value, workflowObjectId: row.workflowObjectId, domainObjectId: row.objectId,
+      workflowAction: workflowActionCode[action], workflowObjectId: row.workflowObjectId, domainObjectId: row.objectId,
       currentWorkflowObjectTransitionId: row.workflowObjectTransitionId, objectTypeId: row.objectTypeId,
       workflowTypeId: row.workflowTypeId, currentStateId: row.currentStateId, currentNodeNumber: row.currentNodeNumber,
-      currentWorkflowTypeStateId: row.currentWorkflowTypeStateId, newStateId: selected?.stateId ?? customState,
+      currentWorkflowTypeStateId: row.currentWorkflowTypeStateId, newStateId: selected?.stateId ?? row.currentStateId,
       newWorkflowTypeStateId: selected?.workflowTypeStateId ?? 0, nodeNumber: selected?.nodeNumber ?? row.currentNodeNumber,
       workflowTypeStateTransitionId: selected?.workflowTypeStateTransitionId ?? 0, newResponsibleUserId, description,
     },

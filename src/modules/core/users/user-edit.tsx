@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Files } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import { ContactFields, loadPlaces, toEditorContact, toSaveContact, type Places } from '@/shared/contact-fields';
@@ -9,9 +8,9 @@ import { useEditForm, validateContact } from '@/shared/forms';
 import { Button, CheckField, FormGroup, Modal, WorkspaceIcon } from '@/shared/ui/primitives';
 import { DefinitionList, PageGroup, StatusPanel } from '@/shared/ui/page';
 import { ToolbarBar } from '@/shared/ui/toolbar';
-import { ObjectDocuments } from '@/shared/ui/documents';
+import { DocumentsToolbarButton, ObjectDocuments } from '@/shared/ui/documents';
 import { toast } from '@/shared/ui/toasts';
-import { emptyUser, getUser, saveUser, type UserEditView } from './user-api';
+import { emptyUser, getUser, saveUser, userDocumentOperations, type UserEditView } from './user-api';
 import { userActions, userPages } from './user-permissions';
 
 export type UserMode = 'new' | 'edit' | 'view';
@@ -62,14 +61,15 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
   const readOnly = mode === 'view' || !workspace.canAction(userPages.editor, userActions.save) ||
     (value.id > 0 && !workspace.canAction(userPages.list, userActions.edit));
   const canDocuments = value.id > 0 && workspace.hasSharedPageGrant('WebObjectDocuments');
+  const documents = useMemo(() => userDocumentOperations(http, value.id), [http, value.id]);
   const allows = {
     view: workspace.canAction(userPages.editor, 'WebViewObjectDocument.UserEdit'),
     upload: !readOnly && workspace.canAction(userPages.editor, 'WebAddObjectDocument.UserEdit'),
     delete: !readOnly && workspace.canAction(userPages.editor, 'WebDeleteObjectDocument.UserEdit'),
   };
+  const documentDialogOpen = documentsOpen && canDocuments && (allows.view || allows.upload || allows.delete);
   closeHook.current = () => {
-    if (documentsOpen) setDocumentsOpen(false);
-    else void form.requestClose(onClose);
+    if (!documentDialogOpen) void form.requestClose(onClose);
   };
 
   useEffect(() => {
@@ -102,8 +102,7 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
   return <form ref={editor} noValidate className="grid gap-2" onSubmit={event => { event.preventDefault(); void submit(); }}>
     <ToolbarBar>
       {!readOnly && <Button type="submit" variant="ghost" className="workspace-toolbar-button" disabled={form.pending}><WorkspaceIcon name="save" />{t('Save', undefined, 'Core')}</Button>}
-      {canDocuments && (allows.view || allows.upload || allows.delete) && <Button variant="ghost" className="workspace-toolbar-button"
-        disabled={form.pending} onClick={() => setDocumentsOpen(true)}><Files />{t('Common.Documents')}</Button>}
+      {canDocuments && <DocumentsToolbarButton allow={allows} disabled={form.pending} onOpen={() => setDocumentsOpen(true)} />}
       <Button variant="ghost" className="workspace-toolbar-button" disabled={form.pending} onClick={() => void form.requestClose(onClose)}>
         <WorkspaceIcon name="back" />{t('Close', undefined, 'Core')}
       </Button>
@@ -128,7 +127,7 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
         [t('Field.UpdatedBy'), value.updatedBy || undefined], [t('Field.UpdatedAt'), date(value.updatedDate)],
       ]} />
     </PageGroup>}
-    {documentsOpen && canDocuments && <ObjectDocuments http={http} userId={value.id}
+    {documentDialogOpen && <ObjectDocuments key={value.id} operations={documents}
       allow={allows} onClose={() => setDocumentsOpen(false)} />}
   </form>;
 }

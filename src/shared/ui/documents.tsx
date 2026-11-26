@@ -1,52 +1,66 @@
-import { useCallback, useRef, useState } from 'react';
-import { Download, Eye, Trash2, Upload } from 'lucide-react';
-import { z } from 'zod';
-import { genericResponse } from '../contracts';
-import { confirmCommand, downloadFile, withQuery, type HttpClientManager } from '../http';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Download, Eye, Files, Trash2, Upload } from 'lucide-react';
+import type { DocumentOperations, ObjectDocument } from '../document-operations';
+import { downloadFile } from '../http';
 import { useGlobalization } from '../globalization';
 import { useResource } from '../resource';
-import { Button, Modal } from './primitives';
+import { Button, Modal, WorkspaceIcon } from './primitives';
 import { DataTable } from './data-table';
 import { StatusPanel } from './page';
 import { useDialogManager } from './dialog-manager';
 import { toast } from './toasts';
+import { ToolbarBar } from './toolbar';
 
-const documentSchema = z.object({
-  documentId: z.union([z.number().int().safe().positive(), z.string().regex(/^\d+$/)]),
-  documentName: z.string(), isDeleted: z.boolean(), documentFileTypeName: z.string().nullish(),
-});
-type DocumentRow = z.infer<typeof documentSchema>;
-const prefix = '/api/document/';
+type DocumentPermissions = { view: boolean; upload: boolean; delete: boolean };
 
-export function ObjectDocuments({ http, userId, allow, onClose }: {
-  http: HttpClientManager; userId: number;
-  allow: { view: boolean; upload: boolean; delete: boolean }; onClose: () => void;
+export function DocumentsToolbarButton({ allow, disabled, onOpen }: {
+  allow: DocumentPermissions; disabled?: boolean; onOpen: () => void;
+}) {
+  const { t } = useGlobalization();
+  if (!allow.view && !allow.upload && !allow.delete) return null;
+  return <Button variant="ghost" className="workspace-toolbar-button" disabled={disabled} onClick={onOpen}>
+    <Files />{t('Common.Documents')}
+  </Button>;
+}
+
+export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
+  operations: DocumentOperations; allow: DocumentPermissions; onClose: () => void; onChanged?: () => void;
 }) {
   const { t, error } = useGlobalization();
   const dialog = useDialogManager();
   const [pending, setPending] = useState(false);
   const [preview, setPreview] = useState<{ blob: Blob; name: string }>();
-  const busy = useRef(false);
+  const [uploadResults, setUploadResults] = useState<{ name: string; message: string }[]>([]);
+  const commandInFlight = useRef<AbortController | null>(null);
+  useEffect(() => () => commandInFlight.current?.abort(), []);
+  const canList = allow.view || allow.delete;
   const load = useCallback(async (signal: AbortSignal) => {
-    if (!allow.view && !allow.delete) return [];
-    const rows = await http.json(withQuery(prefix + 'getobjectdocuments', { userId }), z.array(documentSchema), { signal });
+    if (!canList) return [];
+    const rows = await operations.list(signal);
     return rows.filter(row => !row.isDeleted);
-  }, [http, userId, allow.view, allow.delete]);
+  }, [operations, canList]);
   const result = useResource(load);
-  async function command(action: () => Promise<void>, changes = false) {
-    if (busy.current) return;
-    busy.current = true;
-    setPending(true);
-    try { await action(); }
-    catch (failure) { toast.error(error(failure, changes)); }
-    finally { busy.current = false; setPending(false); }
+  function changed() {
+    result.refresh();
+    onChanged?.();
   }
-  function download(row: DocumentRow, previewOnly: boolean) {
+  async function command(action: (signal: AbortSignal) => Promise<void>, changes = false) {
+    if (commandInFlight.current) return;
+    const controller = new AbortController();
+    commandInFlight.current = controller;
+    setPending(true);
+    try { await action(controller.signal); }
+    catch (failure) { if (!controller.signal.aborted) toast.error(error(failure, changes)); }
+    finally {
+      commandInFlight.current = null;
+      if (!controller.signal.aborted) setPending(false);
+    }
+  }
+  function download(row: ObjectDocument, previewOnly: boolean) {
     if (!allow.view || result.state !== 'ready') return;
-    void command(async () => {
-      const file = await http.file(withQuery(prefix + 'downloadobjectdocument', {
-        userId, documentObjectId: row.documentId,
-      }));
+    void command(async signal => {
+      const file = await operations.download(row.documentId, signal);
+      if (signal.aborted) return;
       const name = file.name ?? row.documentName;
       if (previewOnly && ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'].includes(file.mime)) {
         setPreview({ blob: file.blob, name });
@@ -54,43 +68,62 @@ export function ObjectDocuments({ http, userId, allow, onClose }: {
       else downloadFile(file.blob, name);
     });
   }
-  function remove(row: DocumentRow) {
+  function remove(row: ObjectDocument) {
     if (!allow.delete) return;
-    void command(async () => {
+    void command(async signal => {
       if (!await dialog({ message: t('Common.DeleteConfirm', { name: row.documentName }),
-        accept: t('Delete', undefined, 'Core'), reject: t('Cancel', undefined, 'Core') })) return;
-      confirmCommand(await http.json(withQuery(prefix + 'deleteobjectdocument', {
-        userId, documentObjectId: row.documentId,
-      }), genericResponse, { method: 'POST' }));
+        accept: t('Delete', undefined, 'Core'), reject: t('Cancel', undefined, 'Core') }) || signal.aborted) return;
+      await operations.remove(row.documentId, signal);
+      if (signal.aborted) return;
       toast.success(t('Common.Deleted'));
-      result.refresh();
+      changed();
     }, true);
   }
-  function upload(file: File) {
-    if (!allow.upload || result.state !== 'ready') return;
-    if (file.size <= 0 || file.size > 10 * 1024 * 1024 || !/\.(pdf|png|jpe?g|gif|txt|docx|xlsx)$/i.test(file.name)) {
-      toast.warning(t('Common.FileInvalid'));
-      return;
-    }
-    void command(async () => {
-      const body = new FormData();
-      body.append('userId', String(userId));
-      body.append('file', file);
-      confirmCommand(await http.json(prefix + 'uploadobjectdocuments', genericResponse, { method: 'POST', body }));
-      toast.success(t('Common.Saved'));
-      result.refresh();
+  function upload(files: File[]) {
+    if (!allow.upload || files.length === 0) return;
+    void command(async signal => {
+      setUploadResults([]);
+      let uploaded = false;
+      for (const file of files) {
+        if (signal.aborted) return;
+        const allowedExtension = operations.extensions.some(extension => file.name.toLowerCase().endsWith(extension));
+        let message = t('Common.FileInvalid');
+        if (allowedExtension && file.size > 0 && file.size <= operations.maxUploadBytes) {
+          try {
+            await operations.upload(file, signal);
+            uploaded = true;
+            message = t('Common.Saved');
+          } catch (failure) { message = error(failure, true); }
+        }
+        if (signal.aborted) return;
+        setUploadResults(results => [...results, { name: file.name, message }]);
+      }
+      if (uploaded) changed();
     }, true);
   }
-  return <Modal title={t('Common.Documents')} onClose={() => { if (!busy.current) onClose(); }}>
-    {result.state === 'loading' && <StatusPanel kind="loading" />}
-    {result.state === 'error' && <StatusPanel kind="error" error={result.error} retry={result.refresh} />}
-    {result.state === 'ready' && <>
-      {allow.upload && <label className="mb-4 flex flex-wrap items-center gap-2 text-sm"><Upload size={16} />{t('Common.Upload')}
-        <input type="file" className="min-w-0 max-w-full" disabled={pending} accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.docx,.xlsx"
-          onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) upload(file); }} />
+  const core = (key: string) => t(key, undefined, 'Core');
+  return <Modal title={t('Common.Documents')} onClose={() => { if (!commandInFlight.current) onClose(); }}>
+    <ToolbarBar>
+      {canList && <Button variant="ghost" disabled={pending || result.state === 'loading'} onClick={result.refresh}>
+        <WorkspaceIcon name="arrow-sync" />{core('Refresh')}
+      </Button>}
+      {allow.upload && <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><Upload size={16} />{t('Common.Upload')}
+        <input type="file" className="min-w-0 max-w-full" disabled={pending} accept={operations.extensions.join(',')} multiple
+          onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; upload(files); }} />
       </label>}
-      {(allow.view || allow.delete) && <DataTable label={t('Common.Documents')} rows={result.data} rowId={row => row.documentId} columns={[
-        { key: 'name', title: t('Field.Name'), render: row => row.documentName },
+    </ToolbarBar>
+    <ul aria-live="polite" className="break-all text-sm">
+      {uploadResults.map(({ name, message }, index) => <li key={index}><b>{name}</b> · {message}</li>)}
+    </ul>
+    {canList && result.state === 'loading' && <StatusPanel kind="loading" />}
+    {result.state === 'error' && <StatusPanel kind="error" error={result.error} retry={result.refresh} />}
+    {canList && result.state === 'ready' &&
+      <DataTable label={t('Common.Documents')} rows={result.data} rowId={row => row.documentId} columns={[
+        { key: 'id', title: core('Id'), render: row => row.documentId },
+        { key: 'name', title: core('Name'), render: row => row.documentName },
+        { key: 'fileType', title: core('FileType'), render: row => row.documentFileTypeName },
+        { key: 'type', title: core('Type'), render: row => row.documentTypeName },
+        { key: 'description', title: core('Description'), render: row => row.description },
         { key: 'actions', title: t('Common.Actions'), render: row => <div className="flex flex-wrap gap-1">
           {allow.view && <>
             <Button disabled={pending} onClick={() => download(row, true)} aria-label={t('Common.Preview')}><Eye /></Button>
@@ -100,7 +133,6 @@ export function ObjectDocuments({ http, userId, allow, onClose }: {
             aria-label={t('Delete', undefined, 'Core')}><Trash2 /></Button>}
         </div> },
       ]} />}
-    </>}
     {preview && <DocumentPreview file={preview} close={() => setPreview(undefined)} />}
   </Modal>;
 }

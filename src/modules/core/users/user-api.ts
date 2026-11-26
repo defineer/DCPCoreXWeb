@@ -2,8 +2,32 @@ import { z } from 'zod';
 import { commandWithData, genericResponse, pagedResponse, type PagedDataFilter, type RecordStatus } from '@/shared/contracts';
 import { ApiFailure, confirmCommand, withQuery, type HttpClientManager } from '@/shared/http';
 import { contactSchema, type ContactValues } from '@/shared/contact-fields';
+import { objectDocument, type DocumentOperations } from '@/shared/document-operations';
 
 const prefix = '/api/userservice/';
+
+export function userDocumentOperations(http: HttpClientManager, userId: number): DocumentOperations {
+  const base = '/api/document/';
+  return {
+    maxUploadBytes: 10 * 1024 * 1024,
+    extensions: ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.txt', '.docx', '.xlsx'],
+    list: signal => http.json(withQuery(base + 'getobjectdocuments', { userId }), z.array(objectDocument), {
+      signal, exactIntegerFields: ['documentId'],
+    }),
+    download: (documentObjectId, signal) => http.file(
+      withQuery(base + 'downloadobjectdocument', { userId, documentObjectId }), { signal }),
+    async upload(file, signal) {
+      const body = new FormData();
+      body.append('userId', String(userId));
+      body.append('file', file);
+      confirmCommand(await http.json(base + 'uploadobjectdocuments', genericResponse, { method: 'POST', body, signal }));
+    },
+    async remove(documentObjectId, signal) {
+      confirmCommand(await http.json(withQuery(base + 'deleteobjectdocument', { userId, documentObjectId }),
+        genericResponse, { method: 'POST', signal }));
+    },
+  };
+}
 const listRow = z.object({
   id: z.number().int().positive(), userName: z.string().nullish(), nameSurname: z.string().nullish(),
   email: z.string().nullish(), isActive: z.boolean(),

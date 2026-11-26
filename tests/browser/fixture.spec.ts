@@ -108,6 +108,11 @@ const ownerRoutes = [
   ['WebSQLClient', '/sqlclient', 'SQL client', 'report/connections'],
 ] as const;
 const date = '2026-01-10T08:00:00Z';
+const workflowInboxRow = { workflowObjectId: '9007199254740993', workflowObjectTransitionId: '9007199254740994',
+    workflowTypeId: 2, objectId: '9007199254740995', objectTypeId: 1, objectTypeName: 'Fixture object', currentStateName: 'In progress',
+    canExecuteActions: true, isTerminalState: false, isInitialState: false, allowsDelegation: true,
+    currentStateId: 2, currentNodeNumber: 1, currentWorkflowTypeStateId: 3 };
+
 const ownerResponses: Record<string, unknown> = {
   'servicemanagement/getservicelist': [{ serviceId: 'configuration', serviceName: 'Configuration', serviceIP: '127.0.0.1', port: 9100, startTime: date }],
   'event/queryeventsanalysis': [{ name: 'Configuration', minResponseTimeMs: 2, maxResponseTimeMs: 9, avgResponseTimeMs: 4 }],
@@ -129,10 +134,7 @@ const ownerResponses: Record<string, unknown> = {
   'aiframework/getcommandactivityusers': { users: [], canReadAcrossTenants: false },
   'aiframework/getproviderssimple': [],
   'aiframework/getmodelssimple': [],
-  'workflow/getworkflowinbox': [{ workflowObjectId: '9007199254740993', workflowObjectTransitionId: '9007199254740994',
-    workflowTypeId: 2, objectId: '9007199254740995', objectTypeId: 1, objectTypeName: 'Fixture object', currentStateName: 'In progress',
-    canExecuteActions: true, isTerminalState: false, isInitialState: false, allowsDelegation: true,
-    currentStateId: 2, currentNodeNumber: 1, currentWorkflowTypeStateId: 3 }],
+  'workflow/getworkflowinbox': [workflowInboxRow],
   'workflow/getobjectworkflowhistory': [{ workflowAction: 'Next', stateName: 'In progress', startDate: date, userName: 'Ada' }],
   'report/connections': ['FixtureReportReadOnly'],
   'report/executesqlcommand': [{ 'Value': 'Fixture result' }],
@@ -308,6 +310,11 @@ async function mockApi(page: Page, options: {
             node(137, 120, 'WebTableRowList', 'WebForm'),
             node(138, 124, 'WebListTableRows', 'WebFormAction'),
             node(139, 130, 'WebWorkflowInboxHistory', 'WebFormAction'),
+            node(140, 130, 'WebOpenWorkflowObject', 'WebFormAction'),
+            node(141, 130, 'WebWorkflowInboxNext', 'WebFormAction'),
+            node(142, 130, 'WebWorkflowInboxRestart', 'WebFormAction'),
+            node(143, 130, 'WebWorkflowInboxCancel', 'WebFormAction'),
+            node(144, 130, 'WebWorkflowInboxCompleted', 'WebFormAction'),
           ] : [])].filter(element => !options.excludedGrants?.includes(element.keyName)));
       case '/api/customerservice/getcustomerlicencessimple':
         return reply([{ customerId, licenceId: 3 }]);
@@ -556,7 +563,108 @@ for (const viewport of responsiveSizes) {
       await expectNoPageOverflow(page, viewport.width);
     }
   });
+
+  test('fits Workflow history and transition dialogs on ' + viewport.name, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockApi(page, { ownerPages: true });
+    await page.route('**/api/workflow/getnextstates?*', route => route.fulfill({ json: [
+      { selectionId: 17, workflowTypeStateTransitionId: 17, workflowTypeStateId: 31,
+        nodeNumber: 2, stateId: 21, stateName: 'Review', isDefault: true },
+    ] }));
+    await page.goto('/workflowinboxpage');
+    await page.getByRole('row', { name: /Fixture object/ }).click();
+    await page.getByRole('button', { name: 'Workflow history', exact: true }).click();
+    const history = page.getByRole('dialog', { name: 'Workflow history' });
+    await expectWithinViewport(history, viewport, true);
+    await expectWithinViewport(history.getByRole('button', { name: 'Refresh' }), viewport);
+    await expectWithinViewport(history.getByRole('table').locator('..'), viewport);
+    await history.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    const transition = page.getByRole('dialog', { name: 'Next' });
+    await expect(transition.getByRole('combobox', { name: 'State' })).toHaveValue('17');
+    await expectWithinViewport(transition, viewport, true);
+    await expectWithinViewport(transition.getByRole('button', { name: 'Save' }), viewport);
+    await expectNoPageOverflow(page, viewport.width);
+  });
 }
+
+test('uses the Workflow owner destination for Complete and Cancel and hides unsupported Open targets', async ({ page }) => {
+  await mockApi(page, { ownerPages: true });
+  await page.route('**/api/workflow/getworkflowinbox', route => route.fulfill({ json: [
+    { ...workflowInboxRow, canRestart: false, isInitialState: true,
+      workPageUrl: '/unmigrated-work-page' },
+  ] }));
+  await page.route('**/api/workflow/getnextstates?*', route => {
+    const action = Number(new URL(route.request().url()).searchParams.get('workflowAction'));
+    expect([3, 4]).toContain(action);
+    return route.fulfill({ json: [{ selectionId: action + 60, workflowTypeStateTransitionId: action + 60,
+      workflowTypeStateId: action + 30, nodeNumber: 2, stateId: action + 100,
+      stateName: action === 3 ? 'Configured cancellation' : 'Configured completion', isDefault: true }] });
+  });
+  await page.route('**/api/workflow/changeworkflowstate', route => {
+    const request = route.request();
+    expect(request.headers()['x-dcp-csrf']).toBe('fixture-session');
+    const body = request.postDataJSON();
+    expect(body).toMatchObject({ workflowObjectId: '9007199254740993', currentWorkflowObjectTransitionId: '9007199254740994',
+      newStateId: body.workflowAction + 100, newWorkflowTypeStateId: body.workflowAction + 30,
+      workflowTypeStateTransitionId: body.workflowAction + 60, nodeNumber: 2 });
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/workflowinboxpage');
+  for (const label of ['Complete', 'Cancel']) {
+    await page.getByRole('row', { name: /Fixture object/ }).click();
+    await expect(page.getByRole('button', { name: 'Open', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Restart', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: label, exact: true }).click();
+    const transition = page.getByRole('dialog', { name: label, exact: true });
+    await expect(transition.getByRole('combobox', { name: 'State' })).toHaveValue(label === 'Complete' ? '64' : '63');
+    const saved = page.waitForResponse('**/api/workflow/changeworkflowstate');
+    await transition.getByRole('button', { name: 'Save' }).click();
+    expect((await saved).ok()).toBe(true);
+    await expect(transition).not.toBeVisible();
+  }
+});
+
+test('uploads selected documents separately and preserves exact document IDs', async ({ page }) => {
+  await mockApi(page);
+  let lists = 0;
+  const files: string[] = [];
+  await page.route('**/api/document/getobjectdocuments?*', route => {
+    lists++;
+    return route.fulfill({ contentType: 'application/json', body: '[{"documentId":9007199254740993,"documentName":"Fixture.png",' +
+      '"documentFileTypeName":"PNG","documentTypeName":"Attachment","description":"Fixture metadata","isDeleted":false}]' });
+  });
+  await page.route('**/api/document/uploadobjectdocuments', route => {
+    const request = route.request();
+    expect(request.headers()['x-dcp-csrf']).toBe('fixture-session');
+    const file = /filename="([^"]+)"/.exec(request.postData() ?? '')?.[1] ?? '';
+    files.push(file);
+    return route.fulfill({ json: { success: file === 'first.txt' } });
+  });
+  await page.goto('/userlistpage');
+  await page.getByRole('button', { name: '8', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Edit user' }).getByRole('button', { name: 'Documents' }).click();
+  const documents = page.getByRole('dialog', { name: 'Documents' });
+  await expect(documents.getByRole('cell', { name: '9007199254740993' })).toBeVisible();
+  await expect(documents.getByRole('cell', { name: 'Fixture metadata' })).toBeVisible();
+  const downloaded = page.waitForRequest('**/api/document/downloadobjectdocument?*');
+  await documents.getByRole('button', { name: 'Preview' }).click();
+  expect(new URL((await downloaded).url()).searchParams.get('documentObjectId')).toBe('9007199254740993');
+  await page.getByRole('dialog', { name: 'Fixture.png' }).getByRole('button', { name: 'Close' }).click();
+  await documents.locator('input[type="file"]').setInputFiles([
+    { name: 'first.txt', mimeType: 'text/plain', buffer: Buffer.from('first') },
+    { name: 'second.txt', mimeType: 'text/plain', buffer: Buffer.from('second') },
+    { name: 'unexpected.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('unsupported') },
+  ]);
+  await expect(documents.getByRole('listitem')).toHaveCount(3);
+  await expect(documents.getByRole('listitem').filter({ hasText: 'first.txt' })).toContainText('Changes saved.');
+  await expect(documents.getByRole('listitem').filter({ hasText: 'unexpected.exe' })).toContainText('supported file');
+  expect(files).toEqual(['first.txt', 'second.txt']);
+  await expect.poll(() => lists).toBe(2);
+  await documents.getByRole('button', { name: 'Refresh' }).click();
+  await expect.poll(() => lists).toBe(3);
+});
 
 test('opens a configured cache value through the Cache owner', async ({ page }) => {
   await mockApi(page, { customerId: 0, ownerPages: true });

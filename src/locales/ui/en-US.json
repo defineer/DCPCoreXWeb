@@ -250,6 +250,7 @@
   "AI.ChargedAmount": "Charged amount",
   "AI.Cost": "Provider cost",
   "Workflow.Inbox": "Workflow inbox",
+  "Workflow.Open": "Open",
   "Workflow.History": "Workflow history",
   "Workflow.Node": "Node",
   "Workflow.ObjectId": "Object ID",
