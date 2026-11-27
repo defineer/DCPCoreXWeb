@@ -2,6 +2,14 @@
 
 The legacy inventory contains 67 non-CMS Razor components, including 31 routed pages. React registers all 31 routes. Related operations with outstanding work are listed below. CMS Management is outside this migration.
 
+## Backlog status
+
+- **Event Records full filtered export is complete in code.** The export uses the current filters and the signed-in tenant's paged results. A Chrome fixture verified export across multiple API pages. Signed-in service verification remains open.
+- **Redacted AI Command Activity detail remains open in ReleaseTODO.** Backend B12 covers the approved AIFramework response for command, parameter, and error fields. ReactApp R6 covers rendering and HTTPS staging verification. Current detail shows metadata, usage, and costs.
+- The other in-scope code transformation items are closed. The live verification log tracks signed-in checks. ReleaseTODO tracks production gates and the explicitly deferred protected payload views.
+
+## Component inventory
+
 | Legacy group | Razor components | Current React coverage |
 | --- | ---: | --- |
 | Access Management | 2 | Access Model tree, individual grant dialog, and export. Users can select an individual grant on a conflicting row to view it or edit its status, as in Blazor. Authorized users can also resolve equivalent duplicates. |
@@ -52,7 +60,7 @@ The SQL Client lists approved names from `BrowserReport:ConnectionKeys` in Repor
 | Queue item and runtime table row saves | New and Edit use their respective list action grants and require access to the editor. Save uses the editor's separate Save grant. Data Management checks the editor and Save grant along with the existing list scope. Signed-in save verification remains open. |
 | Documents and Workflow | The document ID parser and Workflow Open route checks were fixed in the shared component stage. Signed-in Documents list and Refresh and Workflow Inbox returned HTTP 200. The live Inbox had no work items. Live document writes, actual work-item targets and transitions remain unverified. |
 | Legacy feature parity | Protected payload views are deferred to ReleaseTODO. A Configuration version with nonempty content can move scope only when its content is replaced in the same write. Conflicting Access Model grants use Blazor's per-grant status editor. Event Records remain tenant-scoped by decision. |
-| Release and HTTPS | The current live evidence applies to Debug. Independent owner projects still target libraries in Release. The installed HTTPS environment must supply the exact browser origin and validator authority for the owning services. No end-to-end Release or HTTPS retest was performed. |
+| Release and HTTPS | The current live evidence applies to Debug. The production topology deploys the independent owners as separate services under SVC-087. The installed HTTPS environment must supply the exact browser origin and validator authority for the owning services. No end-to-end Release or HTTPS retest was performed. |
 | SQL Client | The Report Service connection lookup passed. The browser connection allowlist was empty, so SQL execution remains unverified. |
 
 ## Route and action comparison on 27 November 2026
