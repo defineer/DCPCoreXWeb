@@ -8,6 +8,7 @@ import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
+import { useTableExport } from '@/shared/ui/table-export-action';
 import { toast } from '@/shared/ui/toasts';
 import { deleteLicence, getLicences, type LicenceRow } from './licence-api';
 import { LicenceDetail } from './licence-detail';
@@ -52,12 +53,13 @@ export function LicenceList() {
       setBusy(false);
     }
   }
-  const columns: Column<LicenceRow>[] = [
+  const columns = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
     { key: 'name', title: core('Licence'), render: row => row.licenceName || '–' },
     { key: 'period', title: core('AdditionalPeriodAsDays'), render: row => row.additionalPeriodAsDays, numeric: true },
     { key: 'active', title: core('Active'), render: row => core(row.isActive ? 'Yes' : 'No') },
-  ];
+  ] satisfies Column<LicenceRow>[];
+  const exportAction = useTableExport<LicenceRow>('licences', columns);
   return <Page id="LicenceList" title={title}>
     <RecordStatusResults title={title} operation="LicenceList" load={load} reloadVersion={reload} actions={rows => {
       const row = rows.find(item => item.id === selected);
@@ -69,6 +71,7 @@ export function LicenceList() {
           enabled, run: () => { if (row) setEditor(row.id); } },
         { key: 'WebDeleteLicence', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled, run: () => { if (row) return remove(row); } },
+        exportAction(rows, !busy),
         { key: 'WebViewLicence', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
           enabled, run: () => { if (row) setTarget(row); } },
       ];

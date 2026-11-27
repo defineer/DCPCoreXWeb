@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import type { SimpleDataView } from '@/shared/contracts';
-import { exportTable } from '@/shared/export';
+import { exportTable, type ExportFormat } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
 import { DataTable, ListPage, Pagination, type Column } from '@/shared/ui/data-table';
@@ -35,6 +35,9 @@ export function EventRecordList() {
   const [page, setPage] = useState(1);
   const [selected, select] = useState<string>();
   const [openedKey, setOpenedKey] = useState<string>();
+  const [exporting, setExporting] = useState(false);
+  const exportRequest = useRef<AbortController>(undefined);
+  useEffect(() => () => exportRequest.current?.abort(), []);
   const pageSize = Math.max(10, Math.min(60, preferences?.rowsPerPage ?? 20));
   const { rootGroupId, groupId } = draft;
   const loadChoices = useCallback((signal: AbortSignal) =>
@@ -52,7 +55,7 @@ export function EventRecordList() {
   const all = core('All');
   const canView = canAction(searchPage, viewAction);
   const customerId = state.stage === 'authenticated' ? state.session.customerId : 0;
-  const columns: Column<EventRecord>[] = [
+  const columns = [
     { key: 'key', title: core('Key'), render: row => row.eventKey },
     { key: 'date', title: core('Date'), render: row => date(row.eventDate) },
     { key: 'severity', title: core('Severity'), render: row => row.severity || '–' },
@@ -61,7 +64,46 @@ export function EventRecordList() {
     { key: 'group', title: core('Group'), render: row => row.group || '–' },
     { key: 'customer', title: core('Customer'), render: row => row.customerKey || '–' },
     { key: 'user', title: core('User'), render: row => row.sessionUserName || '–' },
-  ];
+  ] satisfies Column<EventRecord>[];
+
+  async function download(format: ExportFormat, records: EventRecord[]) {
+    await exportTable(format, 'event-records', [columns.map(column => column.title),
+      ...records.map(record => columns.map(column => column.render(record)))]);
+  }
+
+  async function exportAll(format: ExportFormat) {
+    if (!criteria || exportRequest.current) return;
+    const request = new AbortController();
+    exportRequest.current = request;
+    setExporting(true);
+    const batchSize = 200;
+    try {
+      const first = await queryEventRecords(http, criteria, 1, batchSize, request.signal);
+      const records = [...first.data];
+      const keys = new Set(first.data.map(record => record.eventKey));
+      for (let index = 2; index <= Math.ceil(first.totalRecords / batchSize); index++) {
+        const batch = await queryEventRecords(http, criteria, index, batchSize, request.signal);
+        if (batch.totalRecords !== first.totalRecords) {
+          toast.error(t('Event.ExportResultsChanged'));
+          return;
+        }
+        for (const record of batch.data) {
+          keys.add(record.eventKey);
+          records.push(record);
+        }
+      }
+      if (records.length !== first.totalRecords || keys.size !== records.length) {
+        toast.error(t('Event.ExportResultsChanged'));
+        return;
+      }
+      if (!request.signal.aborted) await download(format, records);
+    } catch (failure) {
+      if (!request.signal.aborted) toast.error(error(failure));
+    } finally {
+      exportRequest.current = undefined;
+      if (!request.signal.aborted) setExporting(false);
+    }
+  }
 
   function submit() {
     const start = Date.parse(draft.localStartDate);
@@ -87,11 +129,13 @@ export function EventRecordList() {
         { key: 'export', label: t('Event.ExportPage'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {
             try {
-              await exportTable(format, 'event-records', [columns.map(column => column.title),
-                ...rows.map(row => [row.eventKey, date(row.eventDate), row.severity || '', row.eventType || '',
-                  row.rootGroup || '', row.group || '', row.customerKey || '', row.sessionUserName || ''])]);
+              await download(format, rows);
             } catch (failure) { toast.error(error(failure)); }
           } })) },
+        { key: 'export-all', label: t('Event.ExportAll'), icon: <WorkspaceIcon name="export" />,
+          enabled: rows.length > 0 && !exporting,
+          actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(),
+            run: () => exportAll(format) })) },
         { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
       ]} />}
       query={<form className="grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-4"

@@ -20,11 +20,19 @@ const version = z.object({
   versionDate: text, installedDate: text, objectTypeId: z.number().int(), objectId: z.string(),
   isActive: z.boolean(),
 });
+const versionDetail = version.extend({
+  id: z.number().int().nonnegative(), configurationElementTypeSchemaVersionId: z.number().int().nonnegative(),
+  isDeleted: z.boolean(), insertedBy: z.number().int().nullish(), insertedDate: text,
+  updatedBy: z.number().int().nullish(), updatedDate: text, canSave: z.boolean(), schemas: z.array(simpleData).optional(),
+  canChangeScope: z.boolean().optional(),
+  scopes: z.array(z.object({ objectTypeId: id, key: z.string(), objects: z.array(simpleData) })).optional(),
+});
 
 export type ConfigurationElementRow = z.infer<typeof row>;
 export type ConfigurationElement = z.infer<typeof detail>;
 export type ConfigurationElementChoices = z.infer<typeof choices>;
 export type ConfigurationVersion = z.infer<typeof version>;
+export type ConfigurationVersionDetail = z.infer<typeof versionDetail>;
 
 export function getConfigurationElements(http: HttpClientManager, tree: boolean, configurationElementTypeId: number,
   recordStatusQueryType: RecordStatus, signal: AbortSignal) {
@@ -46,6 +54,28 @@ export function getConfigurationVersionMetadata(http: HttpClientManager, tree: b
   return http.json(withQuery(path + 'getwebconfigurationelementversionmetadata', { tree: String(tree) }), z.array(version), {
     method: 'POST', modifying: false, body: { configurationElementId, recordStatusQueryType }, signal,
   });
+}
+
+export async function deleteConfigurationVersion(http: HttpClientManager, tree: boolean, configurationElementId: number,
+  versionId: number) {
+  confirmCommand(await http.json(withQuery(path + 'deletewebconfigurationelementversion',
+    { tree: String(tree), configurationElementId, id: versionId }), genericResponse, { method: 'POST' }));
+}
+
+export function getConfigurationVersionDetail(http: HttpClientManager, tree: boolean, configurationElementId: number,
+  versionId: number, signal: AbortSignal) {
+  return http.json(withQuery(path + 'getwebconfigurationversiondetail',
+    { tree: String(tree), configurationElementId, id: versionId }), versionDetail, { signal });
+}
+
+export async function saveConfigurationVersionMetadata(http: HttpClientManager, tree: boolean, configurationElementId: number,
+  versionId: number, body: { version: string; versionDate: string; installedDate: string; expectedUpdatedDate: string | null;
+    schemaId?: number; isActive: boolean; isDeleted: boolean; objectTypeId?: number; objectId?: string;
+    replacementContent?: string }) {
+  const result = confirmCommand(await http.json(withQuery(path + 'savewebconfigurationversionmetadata',
+    { tree: String(tree), configurationElementId, id: versionId }), commandWithData(id), { method: 'POST', body }));
+  if (!result.data) throw new ApiFailure('invalid-response');
+  return result.data;
 }
 
 export async function saveConfigurationElement(http: HttpClientManager, tree: boolean, value: ConfigurationElement) {

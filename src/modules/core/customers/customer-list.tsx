@@ -10,10 +10,12 @@ import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
+import { useTableExport } from '@/shared/ui/table-export-action';
 import { toast } from '@/shared/ui/toasts';
 import { CustomerLicenceList } from '../licences/customer-licence-list';
 import { deleteCustomer, getCustomers, getCustomerTypes, type CustomerRow } from './customer-api';
 import { CustomerEditor, type CustomerTarget } from './customer-editor';
+import { CustomerAdministratorSetup } from './customer-administrator-setup';
 
 const allCustomerTypes = -1;
 
@@ -27,6 +29,7 @@ export function CustomerList() {
   const [selectedId, select] = useState<number>();
   const [licences, setLicences] = useState<CustomerRow>();
   const [target, setTarget] = useState<CustomerTarget>();
+  const [setup, setSetup] = useState<CustomerRow>();
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const deleting = useRef(false);
@@ -40,14 +43,17 @@ export function CustomerList() {
   const canLicences = common && canPage('WebCustomerLicenceList') && canAction('WebCustomerList', 'WebListCustomerLicences');
   const canView = canPage('WebCustomerEdit') && canAction('WebCustomerList', 'WebViewCustomer');
   const canEdit = canAction('WebCustomerList', 'WebEditCustomer') && canAction('WebCustomerEdit', 'WebSaveCustomer');
+  const canAdd = common && canPage('WebCustomerEdit') && canAction('WebCustomerEdit', 'WebSaveCustomer')
+    && canAction('WebCustomerList', 'WebAddCustomer');
   const canDelete = canAction('WebCustomerList', 'WebDeleteCustomer');
-  const columns: Column<CustomerRow>[] = [
+  const columns = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
     { key: 'name', title: core('Name'), render: row => row.customerName || '–' },
     { key: 'type', title: core('Type'), render: row => row.customerTypeName || '–' },
     { key: 'phone', title: core('Phone'), render: row => row.phone || '–' },
     { key: 'infoEmail', title: core('InfoEmail'), render: row => row.infoEmail || '–' },
-  ];
+  ] satisfies Column<CustomerRow>[];
+  const exportAction = useTableExport<CustomerRow>('customers', columns);
   const typeOptions = types.state === 'ready' ? types.data.map(type => ({ value: type.id, label: type.name || String(type.id) })) : [];
   const refresh = () => setReload(value => value + 1);
 
@@ -80,6 +86,8 @@ export function CustomerList() {
         const row = rows.find(customer => customer.id === selectedId);
         const enabled = Boolean(row) && !busy;
         return [
+          { key: 'WebAddCustomer', label: core('New'), icon: <WorkspaceIcon name="add" />, allowed: canAdd, enabled: !busy,
+            run: () => setTarget({ mode: 'new' }) },
           { key: 'WebViewCustomer', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView, enabled,
             run: () => { if (row) setTarget({ row, mode: 'view' }); } },
           { key: 'WebEditCustomer', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit, enabled,
@@ -88,16 +96,21 @@ export function CustomerList() {
             run: () => { if (row) return remove(row); } },
           { key: 'WebListCustomerLicences', label: core('Licences'), icon: <ClipboardList />,
             allowed: canLicences, enabled, run: () => { if (row) setLicences(row); } },
+          { key: 'administrator-setup', label: t('Customer.AdministratorSetup'), icon: <WorkspaceIcon name="info" />,
+            allowed: canAdd, enabled, run: () => { if (row) setSetup(row); } },
+          exportAction(rows, !busy),
         ];
       }}>
       {rows => <DataTable label={title} columns={columns} rows={rows} rowId={row => row.id}
         selected={selectedId} onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {target && (target.mode === 'edit' ? canEdit : canView) &&
-      <CustomerEditor target={target} onClose={() => setTarget(undefined)} onSaved={refresh} />}
+    {target && (target.mode === 'new' ? canAdd : target.mode === 'edit' ? canEdit : canView) &&
+      <CustomerEditor target={target} canEdit={canEdit} canView={canView}
+        onClose={() => setTarget(undefined)} onSaved={refresh} />}
     {licences && canLicences && <Modal title={(licences.customerName || String(licences.id)) + ' - ' + core('Licences')}
       workspace onClose={() => setLicences(undefined)}>
       <CustomerLicenceList customerId={licences.id} />
     </Modal>}
+    {setup && canAdd && <CustomerAdministratorSetup customer={setup} onClose={() => setSetup(undefined)} />}
   </Page>;
 }

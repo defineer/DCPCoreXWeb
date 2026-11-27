@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const future = '2099-01-01T00:00:00Z';
 const signedIn = {
@@ -151,6 +152,7 @@ async function mockApi(page: Page, options: {
   customerLicenceMaintenance?: boolean;
   assetManagement?: boolean;
   eventManagement?: boolean;
+  configurationVersions?: boolean;
   ownerPages?: boolean;
 } = {}) {
   const customerId = options.customerId ?? signedIn.customerId;
@@ -270,6 +272,7 @@ async function mockApi(page: Page, options: {
             node(81, 71, 'WebEditCustomer', 'WebFormAction'),
             node(82, 71, 'WebDeleteCustomer', 'WebFormAction'),
             node(83, 79, 'WebSaveCustomer', 'WebFormAction'),
+            node(150, 71, 'WebAddCustomer', 'WebFormAction'),
           ] : []), ...(options.licenceMaintenance ? [
             node(88, 73, 'WebAddLicence', 'WebFormAction'),
             node(89, 73, 'WebEditLicence', 'WebFormAction'),
@@ -300,6 +303,17 @@ async function mockApi(page: Page, options: {
             node(111, 106, 'WebDeleteEvent', 'WebFormAction'),
             node(112, 106, 'WebViewEvent', 'WebFormAction'),
             node(113, 108, 'WebSaveEvent', 'WebFormAction'),
+            node(145, 105, 'WebEventObjectList', 'WebForm', true),
+          ] : []), ...(options.configurationVersions ? [
+            node(146, 70, 'WebConfigurationElementList', 'WebForm', true),
+            node(147, 146, 'WebListVersionsConfigurationElement', 'WebFormAction'),
+            node(148, 70, 'WebConfigurationElementVersionList', 'WebForm'),
+            node(149, 148, 'WebDeleteConfigurationElementVersion', 'WebFormAction'),
+            node(151, 70, 'WebConfigurationElementVersionEdit', 'WebForm'),
+            node(152, 148, 'WebAddConfigurationElementVersion', 'WebFormAction'),
+            node(153, 148, 'WebViewConfigurationElementVersion', 'WebFormAction'),
+            node(154, 148, 'WebEditConfigurationElementVersion', 'WebFormAction'),
+            node(155, 151, 'WebSaveConfigurationElementVersion', 'WebFormAction'),
           ] : []), ...(options.ownerPages ? [
             node(120, 10, 'OwnerModule', 'WebUIModule'),
             ...ownerRoutes.map(([key], index) => node(121 + index, 120, key, 'WebForm', true)),
@@ -1230,6 +1244,267 @@ test('tenant Customer list omits common administration', async ({ page }) => {
   await page.goto('/customerlicencelistpage?customerId=1');
   await expect(page.getByRole('alert')).toHaveText('Access denied');
   expect(requests).toEqual([]);
+});
+
+test('exports only the customers returned for the signed-in tenant', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/customerlistpage');
+  await expect(page.getByRole('cell', { name: 'Acme', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'CSV', exact: true }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('customers.csv');
+  const csv = await readFile(await file.path(), 'utf8');
+  expect(csv).toContain('"Acme"');
+  expect(csv).not.toContain('Example Institute');
+});
+
+for (const viewport of responsiveSizes) test(`creates a customer and retries pending administrator setup on ${viewport.name}`, async ({ page }) => {
+  await mockApi(page, { customerId: 0, customerMaintenance: true });
+  await page.setViewportSize(viewport);
+  const created = { id: 17, customerName: 'New Institute', customerTypeName: 'Education' };
+  let saved = false;
+  let complete = false;
+  await page.route('**/api/customerservice/getcustomers', route => route.fulfill({ json: saved ? [created] : [] }));
+  await page.route('**/api/customerservice/savecustomer', route => {
+    const request = route.request();
+    expect(request.headers()['x-dcp-csrf']).toBe('fixture-session');
+    expect(request.postDataJSON()).toMatchObject({ id: 0, customerName: 'New Institute', supportEmail: 'admin@institute.test' });
+    expect(request.postDataJSON()).not.toHaveProperty('documentStoreId');
+    saved = true;
+    return route.fulfill({ status: 202, json: { success: true, data: 17 } });
+  });
+  await page.route('**/api/customerservice/getwebcustomeradministratorsetup?customerId=17', route =>
+    route.fulfill({ json: { complete, canRetry: !complete } }));
+  await page.route('**/api/customerservice/retrywebcustomeradministratorsetup?customerId=17', route => {
+    expect(route.request().method()).toBe('POST');
+    complete = true;
+    return route.fulfill({ status: 202, json: { success: true } });
+  });
+  await page.goto('/customerlistpage');
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await expectWithinViewport(editor, viewport, true);
+  await editor.getByRole('textbox', { name: 'Name', exact: true }).fill('New Institute');
+  await editor.getByRole('textbox', { name: 'Key Name', exact: true }).fill('new-institute');
+  await editor.getByRole('combobox', { name: 'Type', exact: true }).selectOption('2');
+  await editor.getByRole('textbox', { name: 'Support Email', exact: true }).fill('admin@institute.test');
+  await editor.getByRole('textbox', { name: 'Info Email', exact: true }).fill('info@institute.test');
+  await editor.getByRole('textbox', { name: 'Phone', exact: true }).fill('5550123456');
+  await editor.getByRole('combobox', { name: 'Country', exact: true }).selectOption('1');
+  await editor.getByRole('combobox', { name: 'City', exact: true }).selectOption('2');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: '17', exact: true }).click();
+  await page.getByRole('button', { name: 'Administrator setup', exact: true }).click();
+  await expectWithinViewport(editor, viewport, true);
+  await expect(editor.getByRole('status')).toHaveText('The first administrator has not been provisioned yet.');
+  await editor.getByRole('button', { name: 'Retry setup', exact: true }).click();
+  await expect(editor.getByRole('status')).toHaveText('The first administrator has been provisioned.');
+  await expect(editor.getByRole('button', { name: 'Retry setup', exact: true })).toHaveCount(0);
+});
+
+for (const viewport of responsiveSizes) test(`resolves equivalent Access Model grants after confirmation on ${viewport.name}`, async ({ page }) => {
+  await mockApi(page, { accessModelDialog: true });
+  await page.setViewportSize(viewport);
+  let resolved = false;
+  await page.route('**/api/accessservice/getaccessmodels', route => route.fulfill({ json: [{
+    id: 1, accessModelId: resolved ? 101 : 0, parentConfigurationElementId: 0, elementName: 'Equivalent grants',
+    checked: true, isActive: true, isDeleted: false, accessRight: 'Execute', hasMultipleGrants: !resolved,
+    equivalentGrantIds: resolved ? null : [101, 102],
+  }] }));
+  await page.route('**/api/accessservice/savewebaccessmodels', route => {
+    expect(route.request().postDataJSON()).toEqual({
+      scope: { userId: 8 }, changes: [{ elementId: 1, grantId: 101, expectedAccessRight: 1, expectedIsActive: true,
+        expectedIsDeleted: false, isActive: true, isDeleted: false }], equivalentGrantIds: [101, 102],
+    });
+    resolved = true;
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/accessmodeltreelistpage?userId=8');
+  await page.getByRole('button', { name: '1', exact: true }).click();
+  await page.getByRole('button', { name: 'Resolve duplicate grants', exact: true }).click();
+  const confirm = page.getByRole('alertdialog');
+  await expectWithinViewport(confirm, viewport, true);
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(resolved).toBe(false);
+  await page.getByRole('button', { name: 'Resolve duplicate grants', exact: true }).click();
+  await confirm.getByRole('button', { name: 'Resolve duplicate grants', exact: true }).click();
+  await expect(page.getByText('Equivalent grants', { exact: true })).toBeVisible();
+  expect(resolved).toBe(true);
+});
+
+for (const viewport of responsiveSizes) test(`edits the selected conflicting grant on ${viewport.name}`, async ({ page }) => {
+  await mockApi(page, { accessModelDialog: true });
+  await page.setViewportSize(viewport);
+  let active = true;
+  await page.route('**/api/accessservice/getaccessmodels', route => route.fulfill({ json: [{
+    id: 1, accessModelId: 0, parentConfigurationElementId: 0, elementName: 'Conflicting grants',
+    checked: true, isActive: true, isDeleted: false, accessRight: 'None', hasMultipleGrants: true,
+    grantChoices: [{ id: 101, accessRight: 1, isActive: active, isDeleted: false },
+      { id: 102, accessRight: 2, isActive: true, isDeleted: false }],
+  }] }));
+  await page.route('**/api/accessservice/getaccessmodel?*', route => {
+    expect(Object.fromEntries(new URL(route.request().url()).searchParams))
+      .toEqual({ userId: '8', elementId: '1', accessModelId: '101' });
+    return route.fulfill({ json: { id: 101, isActive: active, isDeleted: false } });
+  });
+  await page.route('**/api/accessservice/savewebaccessmodels?single=true', route => {
+    expect(route.request().postDataJSON()).toEqual({
+      scope: { userId: 8 }, changes: [{ elementId: 1, grantId: 101, expectedAccessRight: 1, expectedIsActive: true,
+        expectedIsDeleted: false, isActive: false, isDeleted: false }],
+    });
+    active = false;
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/accessmodeltreelistpage?userId=8');
+  await page.getByRole('button', { name: '1', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Grant', exact: true }).selectOption('101');
+  await page.getByRole('button', { name: 'Edit selected grant', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await expectWithinViewport(editor, viewport, true);
+  await editor.getByRole('checkbox', { name: 'Active', exact: true }).uncheck();
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  expect(active).toBe(false);
+});
+
+test('exports the full filtered Event Records result across API pages', async ({ page }) => {
+  await mockApi(page, { eventManagement: true });
+  const events = Array.from({ length: 201 }, (_, index) => ({
+    eventKey: String(index + 1), eventDate: date, eventType: 'Fixture event ' + (index + 1),
+  }));
+  const queries: Array<{ page: number; pageSize: number; localStartDate: string; localEndDate: string }> = [];
+  await page.route('**/api/event/getwebeventsearchchoices', route => route.fulfill({ json: { roots: [], groups: [], types: [] } }));
+  await page.route('**/api/event/querywebeventrecords', route => {
+    const query = route.request().postDataJSON();
+    queries.push(query);
+    const offset = (query.page - 1) * query.pageSize;
+    return route.fulfill({ json: { data: events.slice(offset, offset + query.pageSize), totalRecords: events.length } });
+  });
+  await page.goto('/eventobjectlist');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByRole('cell', { name: 'Fixture event 1', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Export all results', exact: true }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'CSV', exact: true }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('event-records.csv');
+  const csv = await readFile(await file.path(), 'utf8');
+  expect(csv.split('\r\n')).toHaveLength(202);
+  expect(csv).toContain('"Fixture event 201"');
+  const { localStartDate, localEndDate } = queries[0];
+  expect(queries.slice(1)).toEqual([
+    { page: 1, pageSize: 200, localStartDate, localEndDate },
+    { page: 2, pageSize: 200, localStartDate, localEndDate },
+  ]);
+});
+
+test('confirms and deletes a Configuration version under the selected element', async ({ page }) => {
+  await mockApi(page, { customerId: 0, configurationVersions: true });
+  const element = { id: 17, elementName: 'Fixture setting', typeId: 1, isActive: true, isSystemElement: false };
+  const version = { id: 81, customerId: 0, configurationElementTypeSchemaVersionId: 2, version: '1.2.3',
+    versionDate: date, installedDate: date, objectTypeId: 0, objectId: '0', isActive: true };
+  let deleted = false;
+  await page.route('**/api/configuration/getwebconfigurationelementchoices?*', route =>
+    route.fulfill({ json: { types: [], licenceTypes: [] } }));
+  await page.route('**/api/configuration/getwebconfigurationelements?*', route => route.fulfill({ json: [element] }));
+  await page.route('**/api/configuration/getwebconfigurationelementversionmetadata?*', route =>
+    route.fulfill({ json: deleted ? [] : [version] }));
+  await page.route('**/api/configuration/deletewebconfigurationelementversion?*', route => {
+    const request = route.request();
+    expect(request.method()).toBe('POST');
+    expect(request.headers()['x-dcp-csrf']).toBe('fixture-session');
+    expect(Object.fromEntries(new URL(request.url()).searchParams)).toEqual({
+      tree: 'false', configurationElementId: '17', id: '81',
+    });
+    deleted = true;
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/configurationelementlistpage');
+  await page.getByRole('button', { name: '17', exact: true }).click();
+  await page.getByRole('button', { name: 'Versions', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: '81', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(deleted).toBe(false);
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(dialog.getByRole('cell', { name: '1.2.3', exact: true })).toHaveCount(0);
+  expect(deleted).toBe(true);
+});
+
+for (const viewport of responsiveSizes) test(`creates and edits Configuration versions with write-only JSON on ${viewport.name}`, async ({ page }) => {
+  await mockApi(page, { customerId: 0, configurationVersions: true });
+  await page.setViewportSize(viewport);
+  const element = { id: 17, elementName: 'Fixture setting', typeId: 1, isActive: true, isSystemElement: false };
+  const base = { customerId: 0, versionDate: date, installedDate: date, objectTypeId: 0, objectId: '0',
+    isActive: true, isDeleted: false, canSave: true, canChangeScope: true,
+    schemas: [{ id: 2, name: 'Schema 2' }, { id: 3, name: 'Schema 3' }],
+    scopes: [{ objectTypeId: 4, key: 'Role', objects: [{ id: 77, name: 'Fixture role' }] }] };
+  const updatedDate = '2026-01-11T08:00:00Z';
+  let replacementSaved = false;
+  let version: (typeof base & { id: number; version: string; configurationElementTypeSchemaVersionId: number; updatedDate: string }) | undefined;
+  await page.route('**/api/configuration/getwebconfigurationelementchoices?*', route =>
+    route.fulfill({ json: { types: [], licenceTypes: [] } }));
+  await page.route('**/api/configuration/getwebconfigurationelements?*', route => route.fulfill({ json: [element] }));
+  await page.route('**/api/configuration/getwebconfigurationelementversionmetadata?*', route =>
+    route.fulfill({ json: version ? [version] : [] }));
+  await page.route('**/api/configuration/getwebconfigurationversiondetail?*', route =>
+    route.fulfill({ json: new URL(route.request().url()).searchParams.get('id') === '0'
+      ? { ...base, id: 0, version: '', configurationElementTypeSchemaVersionId: 0 }
+      : version }));
+  await page.route('**/api/configuration/savewebconfigurationversionmetadata?*', route => {
+    const request = route.request();
+    const id = new URL(request.url()).searchParams.get('id');
+    const body = request.postDataJSON();
+    if (body.replacementContent) {
+      expect(body).toEqual({ version: '1.1', versionDate: date, installedDate: date,
+        expectedUpdatedDate: updatedDate, isActive: true, isDeleted: false, replacementContent: '{"enabled":true}',
+        objectTypeId: 0, objectId: '0' });
+      if (version) version = { ...version, objectTypeId: 0, objectId: '0' };
+      replacementSaved = true;
+      return route.fulfill({ json: { success: true, data: 81 } });
+    }
+    expect(body).toEqual({ version: id === '0' ? '1.0' : '1.1', versionDate: date, installedDate: date,
+      expectedUpdatedDate: id === '0' ? null : updatedDate, isActive: true, isDeleted: false,
+      schemaId: id === '0' ? 2 : 3, ...(id === '0' ? { objectTypeId: 4, objectId: '77' } : {}) });
+    version = { ...base, id: 81, version: body.version, configurationElementTypeSchemaVersionId: body.schemaId, updatedDate,
+      objectTypeId: 4, objectId: '77', canChangeScope: id === '0' };
+    return route.fulfill({ json: { success: true, data: version.id } });
+  });
+  await page.goto('/configurationelementlistpage');
+  await page.getByRole('button', { name: '17', exact: true }).click();
+  await page.getByRole('button', { name: 'Versions', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'New', exact: true }).click();
+  const editor = page.getByRole('dialog').last();
+  await expectWithinViewport(editor, viewport, true);
+  await editor.getByRole('combobox', { name: 'Schema', exact: true }).selectOption('2');
+  await editor.getByRole('combobox', { name: 'Object Type', exact: true }).selectOption('4');
+  await editor.getByRole('combobox', { name: 'Object', exact: true }).selectOption('77');
+  await editor.getByRole('textbox', { name: 'Version', exact: true }).fill('1.0');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('cell', { name: '1.0', exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
+  await editor.getByRole('combobox', { name: 'Schema', exact: true }).selectOption('3');
+  await editor.getByRole('textbox', { name: 'Version', exact: true }).fill('1.1');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('cell', { name: '1.1', exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(editor.getByRole('textbox', { name: 'Version', exact: true })).toHaveValue('1.1');
+  await expect(editor.getByRole('combobox', { name: 'Object Type', exact: true })).toHaveCount(0);
+  const replacement = editor.getByRole('textbox', { name: 'Replacement JSON (leave blank to keep the stored value)' });
+  await expect(replacement).toHaveValue('');
+  await replacement.fill('{"enabled":true}');
+  const objectType = editor.getByRole('combobox', { name: 'Object Type', exact: true });
+  await expect(objectType).toHaveValue('4');
+  await objectType.selectOption('0');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(replacement).toHaveCount(0);
+  expect(replacementSaved).toBe(true);
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(replacement).toHaveValue('');
 });
 
 test('requires login and OTP before restoring a protected destination', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import { recordStatus, type RecordStatus } from '@/shared/contracts';
@@ -7,9 +7,11 @@ import { useGlobalization } from '@/shared/globalization';
 import { ApiFailure } from '@/shared/http';
 import { useResource } from '@/shared/resource';
 import { ListPage, type Column } from '@/shared/ui/data-table';
+import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { LoadingRegion, StatusPanel } from '@/shared/ui/page';
-import { CheckField, WorkspaceIcon } from '@/shared/ui/primitives';
+import { CheckField, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusQuery } from '@/shared/ui/record-status-query';
+import { useTableExport } from '@/shared/ui/table-export-action';
 import { Toolbar, type ToolbarAction } from '@/shared/ui/toolbar';
 import { toast } from '@/shared/ui/toasts';
 import { TreeTable } from '@/shared/ui/tree-table';
@@ -101,9 +103,19 @@ function AccessModelResults({ scope, initial, status, editable, canSave, canView
 }) {
   const { http } = useSession();
   const { t, error } = useGlobalization();
+  const confirm = useDialogManager();
   const form = useEditForm({ rows: initial });
   const [selectedId, select] = useState<number>();
-  const selected = initial.find(row => row.id === selectedId && row.accessModelId > 0);
+  const [selectedGrantId, selectGrant] = useState(0);
+  const [resolving, setResolving] = useState(false);
+  const resolution = useRef(false);
+  const selectedRow = initial.find(row => row.id === selectedId);
+  const choices = selectedRow?.grantChoices ?? [];
+  const selectedGrant = choices.find(grant => grant.id === selectedGrantId);
+  const selected = selectedRow && (selectedGrant ? {
+    ...selectedRow, accessModelId: selectedGrant.id, accessRight: selectedGrant.accessRight,
+    isActive: selectedGrant.isActive, isDeleted: selectedGrant.isDeleted,
+  } : selectedRow.accessModelId > 0 ? selectedRow : undefined);
   const core = (key: string) => t(key, undefined, 'Core');
   const title = core('AccessModels');
   const change = (row: AccessModel, key: GrantField, value: boolean) => {
@@ -130,40 +142,81 @@ function AccessModelResults({ scope, initial, status, editable, canSave, canView
       toast.error(failure instanceof ApiFailure && failure.status === 409 ? t('AccessModel.Stale') : error(failure, true));
     }, onSaved);
   }
-  const columns: Column<AccessModel>[] = [
+
+  async function resolve(row: AccessModel) {
+    const grants = row.equivalentGrantIds;
+    if (!canSave || editable || resolution.current || !grants || grants.length < 2) return;
+    resolution.current = true;
+    setResolving(true);
+    try {
+      if (!await confirm({ message: t('AccessModel.ResolveConfirm', { name: row.elementName || row.id }),
+        accept: t('AccessModel.ResolveDuplicates'), reject: core('Cancel') })) return;
+      await saveAccessModels(http, scope, [accessModelChange({ ...row, accessModelId: grants[0] }, row)], false, grants);
+      onSaved();
+    } catch (failure) {
+      toast.error(failure instanceof ApiFailure && failure.status === 409 ? t('AccessModel.Stale') : error(failure, true));
+    } finally {
+      resolution.current = false;
+      setResolving(false);
+    }
+  }
+  const statusText = (value: boolean) => core(value ? 'Yes' : 'No');
+  const rightText = (value: AccessModel['accessRight']) => {
+    const right = typeof value === 'number' ? accessRightValues[value] : value;
+    return right === 'None' ? core('None') : t('AccessModel.Right.' + right);
+  };
+  const exportColumns = [
     { key: 'id', title: core('Id'), render: model => model.id, numeric: true },
     { key: 'name', title: core('Name'), render: model => {
       const name = model.elementName || String(model.id);
-      return model.hasMultipleGrants ? t('AccessModel.MultipleGrants', { name }) : name;
+      if (!model.hasMultipleGrants) return name;
+      return t(model.grantChoices?.length ? 'AccessModel.MultipleGrantChoices' : 'AccessModel.MultipleGrants', { name });
     } },
     { key: 'type', title: core('Type'), render: model => model.configurationElementTypeName ?? '–' },
-    { key: 'checked', title: core('Checked'), render: model => checkbox(model, 'checked', core('Checked')) },
-    { key: 'active', title: core('Active'), render: model => checkbox(model, 'isActive', core('Active')) },
-    { key: 'deleted', title: core('Deleted'), render: model => checkbox(model, 'isDeleted', core('Deleted')) },
-    { key: 'right', title: core('AccessRight'), render: model => {
-      const right = typeof model.accessRight === 'number' ? accessRightValues[model.accessRight] : model.accessRight;
-      return right === 'None' ? core('None') : t('AccessModel.Right.' + right);
-    } },
-  ];
+    { key: 'checked', title: core('Checked'), render: model => statusText(model.checked) },
+    { key: 'active', title: core('Active'), render: model => statusText(model.isActive) },
+    { key: 'deleted', title: core('Deleted'), render: model => statusText(model.isDeleted) },
+    { key: 'right', title: core('AccessRight'), render: model => rightText(model.accessRight) },
+  ] satisfies Column<AccessModel>[];
+  const exportAction = useTableExport<AccessModel>('access-models', exportColumns);
+  const fields = { checked: 'checked', active: 'isActive', deleted: 'isDeleted' } as const;
+  const columns: Column<AccessModel>[] = exportColumns.map(column => {
+    const field = fields[column.key as keyof typeof fields];
+    return editable && field ? { ...column, render: model => checkbox(model, field, column.title) } : column;
+  });
   const actions: ToolbarAction[] = [
     { key: 'edit', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canSave && !editable, run: onEdit },
     { key: 'WebViewAccessModel', label: core('View'), icon: <WorkspaceIcon name="info" />,
       allowed: canView && !editable, enabled: Boolean(selected), run: () => { if (selected) open({ row: selected, mode: 'view' }); } },
     { key: 'WebEditAccessModel', label: t('AccessModel.EditSelected'), icon: <WorkspaceIcon name="edit" />,
       allowed: canEdit && !editable, enabled: Boolean(selected), run: () => { if (selected) open({ row: selected, mode: 'edit' }); } },
+    { key: 'resolve-duplicates', label: t('AccessModel.ResolveDuplicates'), icon: <WorkspaceIcon name="edit" />,
+      allowed: canSave && !editable && (selectedRow?.equivalentGrantIds?.length ?? 0) > 1, enabled: !resolving,
+      run: () => { if (selectedRow) return resolve(selectedRow); } },
     { key: 'WebSaveAccessModels', label: core('Save'), icon: <WorkspaceIcon name="save" />,
       allowed: editable, enabled: form.dirty && !form.pending, run: submit },
     { key: 'cancel', label: core('Cancel'), allowed: editable, enabled: !form.pending,
       run: () => form.requestClose(onCancel) },
+    { ...exportAction(initial), allowed: !editable },
     { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />,
       enabled: !form.pending, run: () => form.requestClose(onRefresh) },
   ];
   return <ListPage resultsTitle={title} tools={<Toolbar operation="AccessModelTreeList" actions={actions} />}
     query={<RecordStatusQuery value={status} disabled={form.pending}
       onChange={next => void form.requestClose(() => onStatus(next))}
-      onSearch={() => void form.requestClose(onRefresh)} />}>
+      onSearch={() => void form.requestClose(onRefresh)}>
+      {!editable && (canView || canEdit) && choices.length > 0 && <SelectField
+        label={t('AccessModel.SelectGrant')} value={selectedGrantId} onChange={value => selectGrant(Number(value))}
+        options={[{ value: 0, label: '–' }, ...choices.map(grant => ({ value: grant.id,
+          label: t('AccessModel.GrantChoice', { id: grant.id, right: rightText(grant.accessRight),
+            status: core(grant.isDeleted ? 'Deleted' : grant.isActive ? 'Active' : 'Inactive') }),
+        }))]} />}
+    </RecordStatusQuery>}>
     <TreeTable label={title} columns={columns} rows={editable ? form.values.rows : initial}
       nameColumn="name" rowId={row => row.id} parentId={row => row.parentConfigurationElementId}
-      selected={selectedId} onSelect={canView || canEdit ? row => select(row.id) : undefined} />
+      selected={selectedId} onSelect={canView || canEdit || canSave ? row => {
+        select(row.id);
+        selectGrant(0);
+      } : undefined} />
   </ListPage>;
 }

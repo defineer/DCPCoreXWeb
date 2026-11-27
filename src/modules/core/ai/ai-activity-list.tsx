@@ -130,6 +130,7 @@ function ActivityDetails({ id, onClose }: { id: string; onClose: () => void }) {
   const result = useResource(load);
   const core = (key: string) => t(key, undefined, 'Core');
   const item = result.state === 'ready' ? result.data : undefined;
+  const unitPrice = new Intl.NumberFormat(number.resolvedOptions().locale, { maximumFractionDigits: 6 });
   return <Modal workspace title={t('AI.Activity') + ' ' + id} onClose={onClose}>
     {item ? <PageGroup title={core('Details')}>
       <DefinitionList items={[
@@ -140,6 +141,8 @@ function ActivityDetails({ id, onClose }: { id: string; onClose: () => void }) {
         [core('Success'), core(item.isSuccess ? 'Yes' : 'No')], [core('Charged'), core(item.isCharged ? 'Yes' : 'No')],
         [t('AI.Conversation'), item.conversationId], [t('AI.Subscription'), item.subscriptionId],
         [t('AI.ChargedAmount'), number.format(item.chargedAmount)], [t('AI.Cost'), number.format(item.providerCost)],
+        [t('AI.InputUnitPrice'), unitPrice.format(item.providerInputUnitPrice)],
+        [t('AI.OutputUnitPrice'), unitPrice.format(item.providerOutputUnitPrice)],
       ]} />
     </PageGroup> : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <StatusPanel kind="loading" />}

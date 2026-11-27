@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import { loadPlaces, PlaceFields, type Places } from '@/shared/contact-fields';
@@ -11,31 +11,44 @@ import { ToolbarBar } from '@/shared/ui/toolbar';
 import { toast } from '@/shared/ui/toasts';
 import { getCustomer, getCustomerTypes, saveCustomer, type CustomerDetail, type CustomerRow } from './customer-api';
 
-export interface CustomerTarget { row: CustomerRow; mode: 'view' | 'edit' }
-interface EditorProps { target: CustomerTarget; onClose: () => void; onSaved: () => void }
+export type CustomerTarget = { mode: 'new' } | { row: CustomerRow; mode: 'view' | 'edit' };
+interface EditorProps { target: CustomerTarget; canEdit: boolean; canView: boolean; onClose: () => void; onSaved: () => void }
 
 export function CustomerEditor(props: EditorProps) {
   const { http } = useSession();
-  const { t } = useGlobalization();
+  const { t, culture, timeZone } = useGlobalization();
   const { target, onClose } = props;
+  const [id, setId] = useState(target.mode === 'new' ? 0 : target.row.id);
   const close = useRef(onClose);
   const load = useCallback(async (signal: AbortSignal) => {
+    const draft: CustomerDetail = { id: 0, customerTypeId: 0, countryId: 0, countryRegionId: 0, cityId: 0,
+      language: culture, timeZone, isActive: true, isDeleted: false };
     const [detail, places, types] = await Promise.all([
-      getCustomer(http, target.row.id, signal), loadPlaces(http, signal), getCustomerTypes(http, signal),
+      id ? getCustomer(http, id, signal) : Promise.resolve(draft), loadPlaces(http, signal), getCustomerTypes(http, signal),
     ]);
-    return { detail, places, types };
-  }, [http, target.row.id]);
+    return { detail, places, types: id ? types : types.filter(type => type.isActive !== false) };
+  }, [http, id, culture, timeZone]);
   const result = useResource(load);
   if (result.state !== 'ready') close.current = onClose;
-  const name = target.row.customerName || String(target.row.id);
-  return <Modal title={target.mode === 'edit' ? t('Directory.Edit', { name }) : name} workspace onClose={() => close.current()}>
-    {result.state === 'ready' ? <CustomerForm {...props} {...result.data} closeRef={close} />
+  const name = target.mode === 'new' ? t('Customer', undefined, 'Core') : target.row.customerName || String(target.row.id);
+  const mode = target.mode === 'new' && id ? (props.canEdit ? 'edit' : 'view') : target.mode;
+  const title = mode === 'view' ? name : t(mode === 'new' ? 'Directory.New' : 'Directory.Edit', { name });
+  return <Modal title={title} workspace onClose={() => close.current()}>
+    {result.state === 'ready' ? <CustomerForm {...result.data} mode={mode} onClose={onClose} closeRef={close}
+      onSaved={(savedId, closeAfterSave) => {
+        props.onSaved();
+        if (closeAfterSave || (!id && !props.canEdit && !props.canView)) onClose();
+        else if (!id) setId(savedId);
+      }} />
       : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <StatusPanel kind="loading" />}
   </Modal>;
 }
 
-function CustomerForm({ target, detail, places, types, closeRef, onClose, onSaved }: EditorProps & {
+function CustomerForm({ mode, detail, places, types, closeRef, onClose, onSaved }: {
+  mode: CustomerTarget['mode'];
+  onClose: () => void;
+  onSaved: (id: number, closeAfterSave: boolean) => void;
   detail: CustomerDetail; places: Places; types: Array<{ id: number; name?: string | null }>;
   closeRef: { current: () => void };
 }) {
@@ -45,7 +58,7 @@ function CustomerForm({ target, detail, places, types, closeRef, onClose, onSave
   const form = useEditForm(detail);
   const v = form.values;
   const core = (key: string) => t(key, undefined, 'Core');
-  const editable = target.mode === 'edit';
+  const editable = mode !== 'view';
   const disabled = !editable || form.pending;
   const languages = [...new Set([v.language ?? '', 'en-US', 'tr-TR'])];
   const zones = [...new Set([v.timeZone ?? '', 'UTC', ...Intl.supportedValuesOf('timeZone')])];
@@ -69,11 +82,14 @@ function CustomerForm({ target, detail, places, types, closeRef, onClose, onSave
 
   async function submit() {
     if (disabled || !form.dirty) return;
-    await form.submit(validate, snapshot => saveCustomer(http, snapshot), failure => toast.error(error(failure, true)),
+    let savedId = v.id;
+    await form.submit(validate, async snapshot => {
+      savedId = await saveCustomer(http, snapshot);
+      return { ...snapshot, id: savedId };
+    }, failure => toast.error(error(failure, true)),
       newerChanges => {
         toast.success(t('Common.Saved'));
-        onSaved();
-        if (!newerChanges && preferences?.saveAndCloseBehaviour) onClose();
+        onSaved(savedId, !newerChanges && Boolean(preferences?.saveAndCloseBehaviour));
       });
   }
 
@@ -93,7 +109,8 @@ function CustomerForm({ target, detail, places, types, closeRef, onClose, onSave
     <FormGroup title={core('General')}>
       {field('customerName', core('Name'))}{field('keyName', core('KeyName'))}
       <SelectField label={core('Type')} value={v.customerTypeId} disabled={disabled}
-        options={types.map(type => ({ value: type.id, label: type.name || String(type.id) }))}
+        options={[...(v.customerTypeId === 0 ? [{ value: 0, label: '–' }] : []),
+          ...types.map(type => ({ value: type.id, label: type.name || String(type.id) }))]}
         onChange={value => form.change('customerTypeId', Number(value))} error={form.errors.customerTypeId} />
       {field('description', core('Description'))}
     </FormGroup>
@@ -120,10 +137,10 @@ function CustomerForm({ target, detail, places, types, closeRef, onClose, onSave
       <CheckField label={core('Deleted')} value={v.isDeleted} disabled={disabled || !v.isDeleted}
         onChange={() => { form.change('isDeleted', false); form.change('isActive', true); }} />
     </FormGroup>
-    <PageGroup title={core('Details')}>
+    {v.id > 0 && <PageGroup title={core('Details')}>
       <DefinitionList compact items={[[core('Id'), v.id], [core('InsertedBy'), detail.insertedBy ?? '–'],
         [core('InsertedDate'), date(detail.insertedDate)], [core('UpdatedBy'), detail.updatedBy ?? '–'],
         [core('UpdatedDate'), date(detail.updatedDate)]]} />
-    </PageGroup>
+    </PageGroup>}
   </form>;
 }

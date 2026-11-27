@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
@@ -6,12 +6,16 @@ import type { RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
 import { DataTable, type Column } from '@/shared/ui/data-table';
+import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page, StatusPanel } from '@/shared/ui/page';
-import { Modal, SelectField } from '@/shared/ui/primitives';
+import { Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
+import { useTableExport } from '@/shared/ui/table-export-action';
+import { toast } from '@/shared/ui/toasts';
 import { CatalogList, type CatalogColumn } from './configuration-catalog-list';
 import { ConfigurationElementEditor } from './configuration-element-editor';
-import { deleteConfigurationElement, getConfigurationElementChoices, getConfigurationElements,
+import { ConfigurationVersionEditor } from './configuration-version-editor';
+import { deleteConfigurationElement, deleteConfigurationVersion, getConfigurationElementChoices, getConfigurationElements,
   getConfigurationVersionMetadata, type ConfigurationElementRow, type ConfigurationVersion } from './configuration-element-api';
 
 export function ConfigurationElementList() {
@@ -74,12 +78,28 @@ function ConfigurationVersionDialog({ tree, element, onClose }: {
   tree: boolean; element: ConfigurationElementRow; onClose: () => void;
 }) {
   const { http } = useSession();
-  const { t, date } = useGlobalization();
+  const { canAction, canPage } = useWorkspace();
+  const { t, date, error } = useGlobalization();
+  const confirm = useDialogManager();
+  const [selected, select] = useState<number>();
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [target, setTarget] = useState<{ id: number; mode: 'new' | 'view' | 'edit' }>();
+  const deleting = useRef(false);
+  const deleteAction = 'WebDeleteConfigurationElementVersion';
+  const canDelete = canAction('WebConfigurationElementVersionList', deleteAction);
+  const canOpen = canPage('WebConfigurationElementVersionEdit');
+  const viewAction = 'WebViewConfigurationElementVersion';
+  const editAction = 'WebEditConfigurationElementVersion';
+  const addAction = 'WebAddConfigurationElementVersion';
+  const canView = canOpen && canAction('WebConfigurationElementVersionList', viewAction);
+  const canEdit = canOpen && canAction('WebConfigurationElementVersionList', editAction);
+  const canAdd = canOpen && canAction('WebConfigurationElementVersionList', addAction);
   const core = (key: string) => t(key, undefined, 'Core');
   const title = t('Configuration.VersionMetadata');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) =>
     getConfigurationVersionMetadata(http, tree, element.id, status, signal), [http, tree, element.id]);
-  const columns: Column<ConfigurationVersion>[] = [
+  const columns = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
     { key: 'customer', title: core('CustomerId'), render: row => row.customerId, numeric: true },
     { key: 'version', title: core('Version'), render: row => row.version || '–' },
@@ -89,10 +109,52 @@ function ConfigurationVersionDialog({ tree, element, onClose }: {
     { key: 'objectType', title: core('ObjectType'), render: row => row.objectTypeId, numeric: true },
     { key: 'object', title: core('Object'), render: row => row.objectId },
     { key: 'active', title: core('Active'), render: row => core(row.isActive ? 'Yes' : 'No') },
-  ];
-  return <Modal workspace title={(element.elementName || String(element.id)) + ' - ' + title} onClose={onClose}>
-    <RecordStatusResults title={title} operation="ConfigurationElementVersionList" load={load}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} resizable />}
+  ] satisfies Column<ConfigurationVersion>[];
+  const exportAction = useTableExport<ConfigurationVersion>('configuration-versions', columns);
+
+  async function remove(row: ConfigurationVersion) {
+    if (!canDelete || deleting.current) return;
+    deleting.current = true;
+    setBusy(true);
+    try {
+      if (!await confirm({ message: t('Common.DeleteConfirm', { name: row.version || row.id }),
+        accept: core('Delete'), reject: core('Cancel') })) return;
+      await deleteConfigurationVersion(http, tree, element.id, row.id);
+      select(undefined);
+      setReload(value => value + 1);
+      toast.success(t('Common.Deleted'));
+    } catch (failure) {
+      toast.error(error(failure, true));
+    } finally {
+      deleting.current = false;
+      setBusy(false);
+    }
+  }
+  return <Modal workspace title={(element.elementName || String(element.id)) + ' - ' + title}
+    onClose={() => { if (!deleting.current) onClose(); }}>
+    <RecordStatusResults title={title} operation="ConfigurationElementVersionList" load={load} reloadVersion={reload}
+      actions={rows => {
+        const row = rows.find(item => item.id === selected);
+        return [
+          { key: addAction, label: core('New'), icon: <WorkspaceIcon name="add" />, allowed: canAdd,
+            enabled: element.isActive && !busy, run: () => setTarget({ id: 0, mode: 'new' }) },
+          { key: viewAction, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+            enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ id: row.id, mode: 'view' }); } },
+          { key: editAction, label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit,
+            enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ id: row.id, mode: 'edit' }); } },
+          { key: deleteAction, label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
+            enabled: Boolean(row) && !busy, run: () => { if (row) return remove(row); } },
+          exportAction(rows, !busy),
+        ];
+      }}>
+      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id}
+        selected={selected} onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
+    {target && (target.mode === 'new' ? canAdd : target.mode === 'edit' ? canEdit : canView) && <ConfigurationVersionEditor
+      tree={tree} elementId={element.id} versionId={target.id} mode={target.mode}
+      onClose={() => setTarget(undefined)} onSaved={id => {
+        select(id);
+        setReload(value => value + 1);
+      }} />}
   </Modal>;
 }

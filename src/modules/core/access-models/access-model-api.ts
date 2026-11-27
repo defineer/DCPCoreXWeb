@@ -14,6 +14,9 @@ const accessModel = z.object({
   isActive: z.boolean(),
   isDeleted: z.boolean(),
   hasMultipleGrants: z.boolean().optional(),
+  equivalentGrantIds: z.array(z.number().int().positive()).nullish(),
+  grantChoices: z.array(z.object({ id: z.number().int().positive(), accessRight: z.number().int().min(0).max(3),
+    isActive: z.boolean(), isDeleted: z.boolean() })).nullish(),
   accessRight: z.union([z.enum(accessRightValues), z.number().int().min(0).max(3)]),
 });
 const accessModelDetail = accessModel.pick({ isActive: true, isDeleted: true }).extend({
@@ -46,9 +49,10 @@ export function accessModelChange(row: AccessModel, status: Pick<AccessModel, 'i
     expectedIsActive: row.isActive, expectedIsDeleted: row.isDeleted, isActive: status.isActive, isDeleted: status.isDeleted };
 }
 
-export async function saveAccessModels(http: HttpClientManager, scope: AccessModelScope, changes: AccessModelChange[], single = false) {
+export async function saveAccessModels(http: HttpClientManager, scope: AccessModelScope, changes: AccessModelChange[], single = false,
+  equivalentGrantIds?: number[]) {
   const path = '/api/accessservice/savewebaccessmodels';
   confirmCommand(await http.json(single ? withQuery(path, { single: 'true' }) : path, genericResponse, {
-    method: 'POST', body: { scope, changes },
+    method: 'POST', body: { scope, changes, equivalentGrantIds },
   }));
 }

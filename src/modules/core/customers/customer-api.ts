@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { genericResponse, simpleData, type RecordStatus } from '@/shared/contracts';
-import { confirmCommand, withQuery, type HttpClientManager } from '@/shared/http';
+import { commandWithData, genericResponse, simpleData, type RecordStatus } from '@/shared/contracts';
+import { ApiFailure, confirmCommand, withQuery, type HttpClientManager } from '@/shared/http';
 
 const customerRow = z.object({
   id: z.number().int().positive(), customerName: z.string().nullish(), customerTypeName: z.string().nullish(),
@@ -24,7 +24,7 @@ export function getCustomers(http: HttpClientManager, status: RecordStatus, cust
 }
 
 export function getCustomerTypes(http: HttpClientManager, signal: AbortSignal) {
-  return http.json('/api/customerservice/getcustomertypessimple', z.array(simpleData), { signal });
+  return http.json('/api/customerservice/getcustomertypessimple', z.array(simpleData.extend({ isActive: z.boolean().optional() })), { signal });
 }
 
 export function getCustomer(http: HttpClientManager, customerId: number, signal: AbortSignal) {
@@ -34,13 +34,30 @@ export function getCustomer(http: HttpClientManager, customerId: number, signal:
 export async function saveCustomer(http: HttpClientManager, values: CustomerDetail) {
   const { id, customerName, keyName, customerTypeId, description, infoEmail, supportEmail, phone, phone2,
     website, countryId, countryRegionId, cityId, language, timeZone, isActive, isDeleted } = values;
-  confirmCommand(await http.json('/api/customerservice/savecustomer', genericResponse, {
-    method: 'POST', body: { id, customerName, keyName, customerTypeId, description, infoEmail, supportEmail, phone,
-      phone2, website, countryId, countryRegionId, cityId, language, timeZone, isActive, isDeleted },
-  }));
+  const body = { id, customerName, keyName, customerTypeId, description, infoEmail, supportEmail, phone, phone2,
+    website, countryId, countryRegionId, cityId, language, timeZone, isActive, isDeleted };
+  if (id) {
+    confirmCommand(await http.json('/api/customerservice/savecustomer', genericResponse, { method: 'POST', body }));
+    return id;
+  }
+  const result = confirmCommand(await http.json('/api/customerservice/savecustomer', commandWithData(z.number().int().positive()),
+    { method: 'POST', body }));
+  if (!result.data) throw new ApiFailure('invalid-response');
+  return result.data;
 }
 
 export async function deleteCustomer(http: HttpClientManager, customerId: number) {
   confirmCommand(await http.json(withQuery('/api/customerservice/deletecustomer', { customerId }), genericResponse,
     { method: 'POST' }));
+}
+
+const setupResult = z.object({ complete: z.boolean(), canRetry: z.boolean() });
+
+export function getAdministratorSetup(http: HttpClientManager, customerId: number, signal: AbortSignal) {
+  return http.json(withQuery('/api/customerservice/getwebcustomeradministratorsetup', { customerId }), setupResult, { signal });
+}
+
+export async function retryAdministratorSetup(http: HttpClientManager, customerId: number) {
+  confirmCommand(await http.json(withQuery('/api/customerservice/retrywebcustomeradministratorsetup', { customerId }),
+    genericResponse, { method: 'POST' }));
 }

@@ -11,6 +11,7 @@ import { DataTable } from '@/shared/ui/data-table';
 import { Page } from '@/shared/ui/page';
 import { Modal, WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
+import { useTableExport } from '@/shared/ui/table-export-action';
 import { TreeTable } from '@/shared/ui/tree-table';
 import { toast } from '@/shared/ui/toasts';
 import type { AccessModelScope } from '../access-models/access-model-api';
@@ -52,7 +53,7 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
   const command = useRef(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const core = (key: string) => t(key, undefined, 'Core');
-  const columns: Column<T>[] = [
+  const columns: (Omit<Column<T>, 'render'> & { render: (row: T) => string | number })[] = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
     { key: 'name', title: core('Name'), render: row => name(row) || String(row.id) },
     { key: 'active', title: core('Active'), render: row => core(row.isActive ? 'Yes' : 'No') },
@@ -102,6 +103,7 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
     }
   }
 
+  const exportAction = useTableExport<T>(operation, columns);
   return <Page id={operation} title={title}>
     <RecordStatusResults title={rowsTitle} operation={operation} load={load} reloadVersion={reloadVersion} actions={rows => {
       const row = rows.find(row => row.id === selectedId);
@@ -119,6 +121,7 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
           run: () => { if (row) setRelated({ kind: 'users', row }); } },
         { key: accessAction, label: core('AccessModels'), icon: <KeyRound />, allowed: access, enabled: Boolean(row),
           run: () => { if (row) setRelated({ kind: 'accessModels', row }); } },
+        exportAction(rows, !busy),
         { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
       ];
     }}>

@@ -9,6 +9,7 @@ import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page, StatusPanel } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
+import { useTableExport } from '@/shared/ui/table-export-action';
 import { toast } from '@/shared/ui/toasts';
 import { deleteCustomerLicence, getCustomerLicences, type CustomerLicenceRow } from './licence-api';
 import { LicenceDetail } from './licence-detail';
@@ -53,14 +54,15 @@ export function CustomerLicenceList({ customerId }: { customerId: number }) {
       setBusy(false);
     }
   }
-  const columns: Column<CustomerLicenceRow>[] = [
+  const columns = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
     { key: 'start', title: core('StartDate'), render: row => date(row.startDate) },
     { key: 'end', title: core('EndDate'), render: row => date(row.endDate) },
     { key: 'name', title: core('Licence'), render: row => row.licenceName || '–' },
     { key: 'type', title: core('Type'), render: row => row.licenceTypeName || '–' },
     { key: 'active', title: core('Active'), render: row => core(row.isActive ? 'Yes' : 'No') },
-  ];
+  ] satisfies Column<CustomerLicenceRow>[];
+  const exportAction = useTableExport<CustomerLicenceRow>('customer-licences', columns);
   return <>
     <RecordStatusResults title={title} operation="CustomerLicenceList" load={load} reloadVersion={reload} actions={rows => {
       const row = rows.find(item => item.id === selected);
@@ -72,6 +74,7 @@ export function CustomerLicenceList({ customerId }: { customerId: number }) {
           enabled, run: () => { if (row) setEditor(row.id); } },
         { key: 'WebDeleteCustomerLicence', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled, run: () => { if (row) return remove(row); } },
+        exportAction(rows, !busy),
         { key: 'WebViewCustomerLicence', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
           enabled, run: () => { if (row) setTarget(row); } },
       ];

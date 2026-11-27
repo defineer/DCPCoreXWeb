@@ -4,22 +4,22 @@ The legacy inventory contains 67 non-CMS Razor components, including 31 routed p
 
 | Legacy group | Razor components | Current React coverage |
 | --- | ---: | --- |
-| Access Management | 2 | Access Model tree and individual grant dialog. Duplicate grants are read-only. |
+| Access Management | 2 | Access Model tree, individual grant dialog, and export. Users can select an individual grant on a conflicting row to view it or edit its status, as in Blazor. Authorized users can also resolve equivalent duplicates. |
 | Agent Management | 1 | Dashboard calls Agent Service for registered agents and counts by type. Older, unscoped runtime registrations must register again with the updated owner. |
-| AI Management | 4 | Framework and provider dashboards and command activity search call AIFramework Service. Activity detail exposes metadata, usage, and costs. Raw commands, parameters, and error text need an approved redacted projection. |
+| AI Management | 4 | Framework and provider dashboards and command activity search call AIFramework Service. Activity detail exposes metadata, usage, costs, and both provider unit prices. Protected command, parameter, and error views are tracked in ReleaseTODO. |
 | Asset Management | 3 | Asset list, editor, exports, and date-filtered dashboard implemented. |
-| Configuration Element Management | 9 | Type list and editor, schema version maintenance, element list and tree, element metadata maintenance, and scoped value-version metadata implemented. Value editing needs a field-level browser contract for protected settings. |
-| Customer Management | 2 | Customer list and existing-record maintenance implemented. Customer creation and administrator provisioning status depend on the first-administrator admission rule in CONF-043. |
-| Event Management | 5 | Dashboard, definition list and editor, Event Notification mappings, and tenant-scoped record search and metadata detail implemented. Cross-customer search and raw event body access still need an approved authorization and projection contract. Event record exports cover the current result page. |
+| Configuration Element Management | 9 | Type, schema, and element maintenance. The scoped value-version list supports New, View, Edit, Delete, and metadata export. New and Edit support schema and tenant-scoped object selection and write-only JSON replacement. Protected value detail is tracked in ReleaseTODO. |
+| Customer Management | 2 | Customer list, exports, New, existing-record maintenance, and first-administrator setup status and retry. Under CONF-043, provisioning uses the existing setup-specific Security path and login evaluates the customer's licence. |
+| Event Management | 5 | Dashboard, definition list and editor, Event Notification mappings, and tenant-scoped record search, metadata detail and export. The browser remains scoped to the signed-in tenant. Protected event detail is tracked in ReleaseTODO. |
 | JSON Object Management | 2 | Search, editor, and lifecycle operations call JSON Object Service. Object and parent IDs retain their full precision. Store selection stays in the owning manager. |
-| Licence Management | 4 | Licence and Customer Licence lists, details, and maintenance implemented. |
+| Licence Management | 4 | Licence and Customer Licence lists, exports, details, and maintenance implemented. |
 | Notification Management | 6 | Definition and template lists and editors implemented, including channel items, language content, and Event Notification mappings. |
 | Report Management | 1 | SQL Client calls Report Service. The browser selects from configured connection keys and displays returned rows. |
-| Role Management | 4 | Role list, editor, and Role User membership dialogs implemented. |
-| System Management | 10 | The Service Dashboard calls Service Management and Event. Cache, queue, and runtime table pages and related dialogs call Data Management Service. |
-| User Management | 4 | User list, editor, related Roles and Access Models, and User Role membership dialogs implemented. |
+| Role Management | 4 | Role list, editor, and Role User membership dialogs implemented, with exports for both lists. |
+| System Management | 10 | The Service Dashboard calls Service Management and Event. Cache, queue, and runtime table pages and related dialogs call Data Management Service. Queue Item and Runtime Table Row lists support exports. |
+| User Management | 4 | User list, editor, related Roles and Access Models, and User Role membership dialogs implemented. User Role membership supports exports. |
 | Workflow Management | 6 | Inbox, history, and transition dialogs call Workflow Service. Delegation choices come from Security. |
-| Workgroup Management | 4 | Workgroup tree, editor, and Workgroup User membership dialogs implemented. |
+| Workgroup Management | 4 | Workgroup tree, editor, and Workgroup User membership dialogs implemented, with exports for both lists. |
 
 ## Service ownership
 
@@ -49,11 +49,39 @@ The SQL Client lists approved names from `BrowserReport:ConnectionKeys` in Repor
 
 | Case | Finding |
 | --- | --- |
-| Queue item and runtime table row saves | React shows New and Edit under separate grants. Data Management's upsert requires both grants, so either action can be offered to a user whose save would be forbidden. |
+| Queue item and runtime table row saves | New and Edit use their respective list action grants and require access to the editor. Save uses the editor's separate Save grant. Data Management checks the editor and Save grant along with the existing list scope. Signed-in save verification remains open. |
 | Documents and Workflow | The document ID parser and Workflow Open route checks were fixed in the shared component stage. Signed-in Documents list and Refresh and Workflow Inbox returned HTTP 200. The live Inbox had no work items. Live document writes, actual work-item targets and transitions remain unverified. |
-| Legacy feature parity | Customer creation and first-administrator provisioning under CONF-043, Customer List export, and configuration value-version editing and deletion remain incomplete. Event Record exports cover the current result page. Cross-customer and raw event access and raw AI command detail require approved projections or access rules. Duplicate role/element grants are read-only in Access Models. |
+| Legacy feature parity | Protected payload views are deferred to ReleaseTODO. A Configuration version with nonempty content can move scope only when its content is replaced in the same write. Conflicting Access Model grants use Blazor's per-grant status editor. Event Records remain tenant-scoped by decision. |
 | Release and HTTPS | The current live evidence applies to Debug. Independent owner projects still target libraries in Release. The installed HTTPS environment must supply the exact browser origin and validator authority for the owning services. No end-to-end Release or HTTPS retest was performed. |
 | SQL Client | The Report Service connection lookup passed. The browser connection allowlist was empty, so SQL execution remains unverified. |
+
+## Route and action comparison on 27 November 2026
+
+- Inventoried all 67 in-scope Razor components and matched all 31 routed paths against the React route table. Compared declared page actions and legacy export handlers with the React implementations. This static comparison did not verify every field, state, or interaction.
+- Restored Configuration value-version Delete with confirmation, an element- and customer-scoped browser endpoint, and the existing Configuration soft delete. The Versions list continues to return metadata. Protected detail is deferred to ReleaseTODO items R6 and B12.
+- Restored exports for Configuration version metadata, Customers, Licences, Customer Licences, Access Models, Roles, Workgroups, their membership lists, Queue Items, and Runtime Table Rows. Event Records can now export all filtered records through the existing tenant-scoped paged reads. The browser abandons the export if the total changes or the collected rows contain duplicate keys.
+- Restored the AI activity detail's input and output unit prices using the existing metadata response.
+- TypeScript, lint for the changed files, the React production build, 18 unit tests, and 85 Chrome fixtures passed. The CoreService deletion endpoint was reviewed in source. A backend build and signed-in owner verification remain open.
+
+### Follow-up parity changes
+
+- Added authorized Configuration version New, View, Edit, and Save for version metadata and status. The owner assigns new content from an active default for the same customer, element, and schema, with the legacy empty JSON fallback. Existing saves use the scoped record and its expected update timestamp, and preserve content, schema, and object scope.
+- Added common-scope Customer New and a first-administrator status and retry dialog. The browser uses separate Add and Save grants. Initial setup uses the existing immediate or queued path and can proceed without a valid licence under CONF-043. Existing-customer edits no longer start administrator setup. Retries reuse a customer-bound queue key. Data Management rejects Save and Move into the Security queue.
+- Added authorized cleanup of equivalent Access Model grants. The Security owner rechecks the tenant, principal, element, grant IDs, delegated right, and current state in the save transaction. It retains one grant and soft-deletes redundant grants with the same right and state.
+- Confirmed the Event Records scope decision. Search, detail, and exports remain bound to the signed-in tenant. Protected payload work remains in ReleaseTODO.
+- TypeScript, lint for the changed React files, the production frontend build, and the 88-test Chrome regression run passed. The three new workflows also passed all 12 targeted cases across mobile portrait, short landscape, tablet, and desktop.
+- CoreService and Data Management Debug builds passed with zero warnings and errors. Build verification did not exercise tenant data, queue delivery, or sign-in.
+
+### Configuration version schema and object scope
+
+- Added schema selection to existing version edits and user, role, and workgroup selection to New and to edits of empty versions. The Configuration owner validates schema ownership and content compatibility. Security supplies active object choices scoped to the signed-in tenant. Saved values stay on the server.
+- CoreService Debug compiled with zero warnings and errors. TypeScript and the React production build passed. All four targeted Configuration fixtures passed, covering schema selection, exact object identifier submission, and scope locking for nonempty content.
+
+### Protected Configuration writes and per-grant Access Model editing
+
+- Added write-only JSON replacement. The owner validates the new value against its schema and keeps stored content out of browser responses. The endpoint excludes HTTP body logging and requires EF sensitive-data logging to be disabled. Configuration version content is excluded from entity-change events, while record and status metadata remain available.
+- Matched Blazor's individual View and status Edit for grants attached to a conflicting tree row. The Security owner rechecks the selected grant's tenant, principal, element, delegated right, and expected state. Equivalent duplicate cleanup remains a separate confirmed action.
+- CoreService and Data Management built in Debug with zero warnings and errors. TypeScript, scoped lint, the React production build, 18 unit tests, and all 101 Chrome fixtures passed. The new grant and Configuration fixtures covered mobile portrait, short landscape, tablet, and desktop.
 
 ## Shared Documents and Workflow acceptance on 26 November 2026
 

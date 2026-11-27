@@ -81,7 +81,9 @@ The full Chrome fixture suite passed all 76 cases after the session fix. After t
 
 CoreService restarted on port `9100`. Data Management, Workflow, JSON Object, Report, and AIFramework were rebuilt with owner-side browser authentication. Each owning service validates the cookie and required CSRF through the existing Security session authority and handles its own business request. Internal bearer callers keep the bearer path. User Edit's existing scoped Document integration remains covered by the Document retest above. Agent Service was excluded.
 
-The private validation endpoint is reachable only via loopback and requires a server-held key. Its responses bypass the normal request and response body logger. The browser receives no bearer credentials. The development hosts use `BrowserSession__Origin=http://127.0.0.1:5174` and `BrowserOwnerSession__Authority=http://127.0.0.1:9100`. CoreService and the owning hosts obtain the same `BrowserOwnerSession__Key` from server-only configuration. The owner operation allowlist and existing page/action grants control what the browser can call. Runtime item upserts require both add and edit grants because they can overwrite an existing key.
+The private validation endpoint is reachable only via loopback and requires a server-held key. Its responses bypass the normal request and response body logger. The browser receives no bearer credentials. The development hosts use `BrowserSession__Origin=http://127.0.0.1:5174` and `BrowserOwnerSession__Authority=http://127.0.0.1:9100`. CoreService and the owning hosts obtain the same `BrowserOwnerSession__Key` from server-only configuration. The owner operation allowlist and existing page/action grants control what the browser can call.
+
+The current Queue Item and Runtime Table Row permission model assigns New and Edit to the list and Save to the editor. The browser save operations require the editor's Save grant and retain the existing list scope. Signed-in saves with the corrected grant mapping remain unverified.
 
 Negative live checks returned HTTP 401 for anonymous owner access, HTTP 403 for a bearer on the browser authority and for cross-origin requests, and HTTP 404 for the private endpoint without its key and an unlisted AI operation.
 
@@ -147,3 +149,13 @@ On the newer CoreService build, the signed-in Licence list returned three record
 React and nine application services were rebuilt and restarted. Workflow Service initially received HTTP 502 from the gateway during its startup authentication. After CoreService became reachable through the gateway, restarting Workflow succeeded and all nine service ports were listening.
 
 After sign-in through React on port 5174, User Edit opened Documents and Refresh loaded the grid. CoreService and Document Service both recorded HTTP 200 for the list operation. Workflow Service returned HTTP 200 for the signed-in Inbox, including the All status filter. The live Inbox had no work items. Batch uploads and Complete and Cancel were exercised with fixtures. Live writes, populated workflow targets, SQL execution and Release/HTTPS are still unverified.
+
+## Route and action comparison on 27 November 2026
+
+No live service checks were run for the changes from this comparison. Chrome fixtures verified that Customer List CSV contains the signed-in tenant's rows, Event Records CSV spans multiple API result pages with the same filters, and Configuration version Delete submits the selected version and element IDs after confirmation, then refreshes the list. The fixture mocked CoreService. The scoped Configuration deletion endpoint and the new exports still need signed-in owner verification.
+
+Protected payload views for Configuration, Event Records, and AI Command Activity are deferred to ReleaseTODO items R6 and B12. No protected content was added to the browser responses in this pass.
+
+The follow-up Chrome fixtures verified new Customer creation, the administrator status and retry dialog, Configuration version New and Edit without protected content in the request, and confirmation and submission of equivalent-grant cleanup. Each workflow was exercised in mobile portrait, short landscape, tablet, and desktop. The fixtures mocked owner responses. CoreService and Data Management compiled in Debug. Signed-in provisioning, Configuration version writes, and authorization and persistence for grant cleanup still need live verification.
+
+Final code verification covered all 101 Chrome fixtures. Configuration fixtures verified schema changes, object-scope changes with write-only replacement, and an empty replacement field on reopen. Access Model fixtures verified that editing a conflicting grant submits the selected grant ID and status. These fixtures mocked owner responses. CoreService and Data Management Debug builds passed. Live persistence, authorization and log redaction were not exercised.
