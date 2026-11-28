@@ -680,6 +680,58 @@ test('uploads selected documents separately and preserves exact document IDs', a
   await expect.poll(() => lists).toBe(3);
 });
 
+for (const viewport of responsiveSizes) {
+  test(`previews an octet-stream text attachment on ${viewport.name}`, async ({ page }) => {
+    const text = 'Türkçe metin\n<img src=x onerror=alert(1)>\n' + 'A'.repeat(512) + '\n'.repeat(50) + 'Last line';
+    await page.setViewportSize(viewport);
+    await mockApi(page);
+    await page.route('**/api/document/getobjectdocuments?*', route => route.fulfill({ json: [
+      { documentId: '42', documentName: 'Fixture.TXT', isDeleted: false },
+    ] }));
+    await page.route('**/api/document/downloadobjectdocument?*', route => route.fulfill({
+      contentType: 'application/octet-stream', headers: { 'content-disposition': 'attachment; filename="Fixture.TXT"' }, body: text,
+    }));
+    await page.goto('/userlistpage');
+    await page.getByRole('button', { name: '8', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Edit user' }).getByRole('button', { name: 'Documents' }).click();
+    const documents = page.getByRole('dialog', { name: 'Documents' });
+    await documents.getByRole('button', { name: 'Preview' }).click();
+    const preview = page.getByRole('dialog', { name: 'Fixture.TXT' });
+    const body = preview.locator('.workspace-popup-body');
+    await expect.poll(() => body.locator('pre').textContent()).toBe(text);
+    await expect(preview.locator('img')).toHaveCount(0);
+    await expectWithinViewport(preview, viewport, true);
+    await expectNoPageOverflow(page, viewport.width);
+    expect(await body.evaluate(element => element.scrollWidth)).toBe(await body.evaluate(element => element.clientWidth));
+    await body.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    expect(await body.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    const close = preview.getByRole('button', { name: 'Close' });
+    await expectWithinViewport(close, viewport, true);
+    await close.click();
+    await expect(documents).toBeVisible();
+  });
+}
+
+test('localizes Turkish management menus and the Workflow workgroup column', async ({ page }) => {
+  await mockApi(page, { ownerPages: true });
+  await page.route('**/api/session', route => route.fulfill({ json: { ...signedIn, language: 'tr-TR' } }));
+  await page.route('**/api/userservice/getuserpreferencesweb?*', route => route.fulfill({ json: { ...preferences, language: 'tr-TR' } }));
+  await page.route('**/api/userservice/getuseraccessibleelements', route => route.fulfill({ json: [
+    ...elements,
+    node(120, 10, 'NotificationWebUI', 'WebUIModule', false, 'Notification Management'),
+    node(121, 120, 'WebNotificationList', 'WebForm', true),
+    node(122, 10, 'WebWorkflowInbox', 'WebForm', true),
+  ] }));
+  await page.goto('/workflowinboxpage');
+  const nav = page.getByRole('navigation', { name: 'Çalışma alanı' });
+  await nav.locator('summary').filter({ hasText: 'Yapılandırma Yönetimi' }).click();
+  await expect(nav.getByRole('link', { name: 'Müşteri Yönetimi' })).toBeVisible();
+  await nav.locator('summary').filter({ hasText: 'Uyarı Yönetimi' }).click();
+  await expect(nav.getByRole('link', { name: 'Uyarılar' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Çalışma Grubu', exact: true })).toBeVisible();
+});
+
 test('opens a configured cache value through the Cache owner', async ({ page }) => {
   await mockApi(page, { customerId: 0, ownerPages: true });
   await page.goto('/cacheitemlistformpage');

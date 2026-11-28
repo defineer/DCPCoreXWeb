@@ -112,3 +112,11 @@ React was listening on 5174. CoreService on 9100 and the independent owner ports
 - The isolated CoreService build passed with zero warnings and zero errors. The running CoreService still uses its previous build. The new endpoints have pending live verification.
 
 The [live verification log](core-live-verification.md) records earlier live results. This stage made no database migrations or live writes.
+
+## Menu and action audit on 28 November 2026
+
+The running local application opened all 31 registered Core routes in the Administrator session, including all 24 sidebar links and Agent Dashboard. Home and the seven account links also opened. The signed-in audit exercised searches, refreshes, record and confirmation dialogs, Customer CSV, User Documents, application switching and sign-out. The [live verification log](core-live-verification.md#signed-in-menu-and-action-audit-on-28-november-2026) records the action coverage, observed failures and remaining live checks.
+
+The separate Chrome fixture run passed all 101 tests, including the four viewport sizes. The React production build and all 18 unit tests also passed.
+
+The follow-up fixed text attachment preview and the Turkish Configuration, Notification and Workflow workgroup labels. The signed-in live retest passed for all four reported issues. Fourteen focused Chrome fixtures separately verified the preview and related navigation and Workflow paths, including responsive preview coverage. [Live retest details](core-live-verification.md#text-preview-and-turkish-label-retest)

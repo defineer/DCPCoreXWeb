@@ -159,3 +159,30 @@ Protected payload views for Configuration, Event Records, and AI Command Activit
 The follow-up Chrome fixtures verified new Customer creation, the administrator status and retry dialog, Configuration version New and Edit without protected content in the request, and confirmation and submission of equivalent-grant cleanup. Each workflow was exercised in mobile portrait, short landscape, tablet, and desktop. The fixtures mocked owner responses. CoreService and Data Management compiled in Debug. Signed-in provisioning, Configuration version writes, and authorization and persistence for grant cleanup still need live verification.
 
 Final code verification covered all 101 Chrome fixtures. Configuration fixtures verified schema changes, object-scope changes with write-only replacement, and an empty replacement field on reopen. Access Model fixtures verified that editing a conflicting grant submits the selected grant ID and status. These fixtures mocked owner responses. CoreService and Data Management Debug builds passed. Live persistence, authorization and log redaction were not exercised.
+
+## Signed-in menu and action audit on 28 November 2026
+
+The Turkish Administrator session in the VS Code integrated browser opened all 24 Core sidebar links, the seven other registered Core routes through their direct URLs, and all eight shared signed-in pages. The seven direct routes covered Configuration Element Types, Configuration Elements, User Roles, Role Users, Workgroup Users, Access Models and Customer Licences. Sign-out redirected to sign-in. The password-recovery help link displayed administrator instructions and returned to sign-in.
+
+| Owning capability | Live browser observations |
+| --- | --- |
+| Security and Configuration | User search and refresh worked. User New, Edit, View, Delete confirmation, Roles and Access Models opened. Role and Workgroup membership and access-model dialogs opened. Configuration Versions returned a row, and New, View, Edit and Delete confirmation opened. The replacement JSON field was empty on Edit. Customer New, administrator setup status and scoped Licences opened. Customer CSV saved with the same single row and five columns shown in the grid. Licence Edit opened. |
+| Asset, Event and Notification | Asset List and Dashboard opened. Asset refresh completed. Event definitions returned rows and the selected Event's Notifications dialog opened. Event Records search completed with zero rows for both the default dates and a one-month window. Notification List and Template List returned rows. New and Edit opened for both. |
+| Data Management and Agent | Service Dashboard rendered the live registration table. Cache and Queue refreshes returned empty grids. The Cache Clear confirmation opened and was cancelled. Runtime Tables returned a populated table. Rows, New and View opened. Agent Dashboard loaded the list and counts and refreshed to zero records. |
+| Document, Workflow, Report, JSON Object and AIFramework | User Edit Documents listed the existing attachment and refreshed. Download saved a 4,013-byte file. Workflow Inbox loaded with both Active and All filters. Report rendered its connection-availability message. JSON Object search completed and enabled New. Both AI dashboards rendered their empty states, and Command Activity displayed its search filters and empty results. |
+
+| Failure or limitation | Observed result |
+| --- | --- |
+| Documents Preview | The text attachment exposed an enabled Preview action. Clicking it displayed “Bu özellik şu anda kullanılamıyor.” The implementation supports JPEG, PNG, GIF and PDF previews. Download was available for the text attachment. |
+| Turkish localization | The Configuration Management and Notification Management submenu headings displayed English in the Turkish workspace. Workflow Inbox also displayed the column label “Group.” |
+| Applications | AI Data Analytics and Collaboration switched to Home with an empty sidebar. Service Dashboard showed both corresponding services as unregistered. Switching back to DCP Core restored its sidebar. |
+| SQL execution | The Report connection lookup completed. The application reported that no browser report connection was configured and kept Run disabled. |
+| Actions requiring records or submissions | Workflow History and transition actions, Queue Items, Cache value detail and populated Event Records export could not be verified with the data returned. Live saves, delete submissions, permission changes, customer setup retry, uploads and password changes were not submitted. |
+
+Live outcomes above are based on rendered responses through the running React proxy. Per-action HTTP statuses were not captured. Separately, the production build, TypeScript and all 101 Chrome browser fixtures and 18 unit tests passed. The browser fixtures use mocked services and include mobile portrait, short landscape, tablet and desktop coverage.
+
+### Text preview and Turkish label retest
+
+Reloaded the running React app on port 5174 in the Turkish Administrator session. User Edit → Documents → Preview opened the existing `Notes.txt` attachment and rendered its text. Escape closed the preview and returned to the Documents list. The sidebar displayed **Yapılandırma Yönetimi** and **Uyarı Yönetimi**, and both groups expanded to show their links. Workflow Inbox loaded and displayed **Çalışma Grubu** as its workgroup column header. Live service results were observed in the browser.
+
+Separately, all 14 focused Chrome fixtures passed, including text preview on mobile portrait, short landscape, tablet and desktop. The preview cases used the browser download contract's octet-stream MIME type and verified that HTML-like content remains literal, long lines wrap, the dialog scrolls, and Close stays reachable. The production build, TypeScript, targeted ESLint and all 18 unit tests passed.

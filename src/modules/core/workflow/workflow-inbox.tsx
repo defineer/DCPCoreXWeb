@@ -45,7 +45,7 @@ export function WorkflowInbox() {
     { key: 'state', title: core('State'), render: (item: WorkflowInboxItem) => item.currentStateName || '–' },
     { key: 'user', title: core('User'), render: (item: WorkflowInboxItem) => item.responsibleUserName || '–' },
     { key: 'role', title: core('Role'), render: (item: WorkflowInboxItem) => item.responsibleRoleName || '–' },
-    { key: 'workgroup', title: core('Workgroup'), render: (item: WorkflowInboxItem) => item.responsibleWorkgroupName || '–' },
+    { key: 'workgroup', title: t('Workflow.Workgroup'), render: (item: WorkflowInboxItem) => item.responsibleWorkgroupName || '–' },
   ];
   const workUrl = row?.workPageUrl;
   const workPath = workUrl?.split(/[?#]/, 1)[0];

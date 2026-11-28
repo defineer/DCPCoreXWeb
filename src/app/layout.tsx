@@ -144,6 +144,12 @@ function containsPage(entry: NavigationEntry, path: string): boolean {
   return entry.page?.path === path || entry.children.some(child => containsPage(child, path));
 }
 
+const moduleLabels = new Map([
+  ['SecurityWebUI', 'App.SecurityManagement'],
+  ['ConfigurationWebUI', 'App.ConfigurationManagement'],
+  ['NotificationWebUI', 'App.NotificationManagement'],
+]);
+
 function NavEntries({ entries, layout, nested = false }: {
   entries: NavigationEntry[]; layout: 'left' | 'collapsed' | 'top'; nested?: boolean;
 }) {
@@ -162,7 +168,8 @@ function NavEntries({ entries, layout, nested = false }: {
   return <ul ref={list} className={cn('m-0 list-none p-0', layout === 'top' && !nested && 'flex min-w-0 flex-wrap items-center gap-1',
     layout === 'left' && nested && 'pb-1')}>
     {entries.map(entry => {
-      const label = entry.page ? t(entry.page.label) : entry.key === 'SecurityWebUI' ? t('App.SecurityManagement') : entry.label;
+      const labelKey = entry.page?.label ?? moduleLabels.get(entry.key ?? '');
+      const label = labelKey ? t(labelKey) : entry.label;
       const icon = entry.page ? <WorkspaceIcon name="gridlist" className="size-5" /> : <Shield className="size-4 shrink-0" />;
       const iconOnly = layout === 'collapsed' && !nested;
       const linkClass = layout === 'left' || iconOnly

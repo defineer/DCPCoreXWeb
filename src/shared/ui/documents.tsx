@@ -12,6 +12,15 @@ import { toast } from './toasts';
 import { ToolbarBar } from './toolbar';
 
 type DocumentPermissions = { view: boolean; upload: boolean; delete: boolean };
+type PreviewKind = 'image' | 'pdf' | 'text';
+type PreviewFile = { blob: Blob; name: string; kind: PreviewKind };
+
+function previewKind(mime: string, name: string): PreviewKind | undefined {
+  if (['image/jpeg', 'image/png', 'image/gif'].includes(mime)) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+  // The scoped browser download serves text attachments as octet-stream.
+  if (mime === 'text/plain' || (mime === 'application/octet-stream' && /\.txt$/i.test(name))) return 'text';
+}
 
 export function DocumentsToolbarButton({ allow, disabled, onOpen }: {
   allow: DocumentPermissions; disabled?: boolean; onOpen: () => void;
@@ -29,7 +38,7 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
   const { t, error } = useGlobalization();
   const dialog = useDialogManager();
   const [pending, setPending] = useState(false);
-  const [preview, setPreview] = useState<{ blob: Blob; name: string }>();
+  const [preview, setPreview] = useState<PreviewFile>();
   const [uploadResults, setUploadResults] = useState<{ name: string; message: string }[]>([]);
   const commandInFlight = useRef<AbortController | null>(null);
   useEffect(() => () => commandInFlight.current?.abort(), []);
@@ -62,10 +71,13 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
       const file = await operations.download(row.documentId, signal);
       if (signal.aborted) return;
       const name = file.name ?? row.documentName;
-      if (previewOnly && ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'].includes(file.mime)) {
-        setPreview({ blob: file.blob, name });
-      } else if (previewOnly) toast.info(t('Common.Unavailable'));
-      else downloadFile(file.blob, name);
+      if (!previewOnly) {
+        downloadFile(file.blob, name);
+        return;
+      }
+      const kind = previewKind(file.mime, name);
+      if (kind) setPreview({ blob: file.blob, name, kind });
+      else toast.info(t('Common.Unavailable'));
     });
   }
   function remove(row: ObjectDocument) {
@@ -137,22 +149,24 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
   </Modal>;
 }
 
-function DocumentPreview({ file, close }: { file: { blob: Blob; name: string }; close: () => void }) {
+function DocumentPreview({ file, close }: { file: PreviewFile; close: () => void }) {
   const { t } = useGlobalization();
   const load = useCallback(async (signal: AbortSignal) => {
-    if (file.blob.type === 'application/pdf') return undefined;
+    if (file.kind === 'pdf') return undefined;
     const reader = new FileReader();
     return new Promise<string>((resolve, reject) => {
       signal.addEventListener('abort', () => reader.abort(), { once: true });
       reader.onerror = reject;
       reader.onload = () => resolve(String(reader.result));
-      reader.readAsDataURL(file.blob);
+      if (file.kind === 'text') reader.readAsText(file.blob);
+      else reader.readAsDataURL(file.blob);
     });
   }, [file]);
   const result = useResource(load);
   return <Modal title={file.name} onClose={close}>
-    {result.state === 'ready' && result.data && <img src={result.data} alt={file.name} className="max-h-[60dvh] max-w-full object-contain" />}
-    {file.blob.type === 'application/pdf' && <Button onClick={() => downloadFile(file.blob, file.name)}>{t('Common.Download')}</Button>}
+    {result.state === 'ready' && file.kind === 'image' && <img src={result.data} alt={file.name} className="max-h-[60dvh] max-w-full object-contain" />}
+    {result.state === 'ready' && file.kind === 'text' && <pre className="m-0 whitespace-pre-wrap [overflow-wrap:anywhere]">{result.data}</pre>}
+    {file.kind === 'pdf' && <Button onClick={() => downloadFile(file.blob, file.name)}>{t('Common.Download')}</Button>}
     {result.state === 'loading' && <StatusPanel kind="loading" />}
     {result.state === 'error' && <StatusPanel kind="error" error={result.error} retry={result.refresh} />}
   </Modal>;
