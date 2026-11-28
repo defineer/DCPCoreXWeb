@@ -20,7 +20,7 @@ export function HomePage() {
     <div className="workspace-overview">
       <Panel className="workspace-overview-panel">
         <dl>
-          <dt>{t('Field.Customer')}</dt><dd><Link to="/contact" aria-label={t('Page.Contact')}>{session.customerId}</Link></dd>
+          <dt>{t('Field.Customer')}</dt><dd><Link to="/contact" aria-label={t('Page.Contact')}>{session.customerName?.trim() || '–'}</Link></dd>
           <dt>{t('Page.Licence')}</dt><dd><Link to="/licence" aria-label={t('Page.Licence')}>
             {licence.state === 'loading' ? <span role="status">{t('Common.Loading')}</span> : details?.licenceName ?? '–'}
           </Link></dd>
@@ -32,7 +32,7 @@ export function HomePage() {
       <Panel className="workspace-overview-panel">
         <dl>
           <dt>{t('UserName', undefined, 'Core')}</dt><dd><Link to="/myprofile" aria-label={t('Page.Profile')}>{session.userName}</Link></dd>
-          <dt>{t('Field.Name')}</dt><dd>{session.displayName || session.userName}</dd>
+          <dt>{t('Field.Name')}</dt><dd>{session.nameSurname?.trim() || '–'}</dd>
           <dt>{t('Field.TimeZone')}</dt><dd>{session.timeZone}</dd>
           <dt>{t('Field.Language')}</dt><dd><Link to="/mypreferences" aria-label={t('Page.Preferences')}>{session.language}</Link></dd>
         </dl>

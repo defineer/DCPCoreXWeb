@@ -4,7 +4,7 @@ import { exportTable } from '@/shared/export';
 import { useEditForm, type FormErrors } from '@/shared/forms';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { StatusPanel } from '@/shared/ui/page';
 import { Button, FormGroup, Modal, SelectField, TextAreaField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { Toolbar, ToolbarBar, type ToolbarAction } from '@/shared/ui/toolbar';
@@ -83,6 +83,7 @@ function WorkflowHistory({ http, workflowObjectId, onClose }: {
       return key ? core(key) : String(item.workflowAction);
     } },
     { key: 'state', title: core('State'), value: (item: WorkflowHistoryItem) => item.stateName },
+    { key: 'stateKey', title: core('KeyName'), value: (item: WorkflowHistoryItem) => item.stateKeyName },
     { key: 'date', title: core('StartDate'), value: (item: WorkflowHistoryItem) => date(item.startDate) },
     { key: 'user', title: core('User'), value: (item: WorkflowHistoryItem) => item.userName },
     { key: 'role', title: core('Role'), value: (item: WorkflowHistoryItem) => item.responsibleRoleName },
@@ -104,7 +105,7 @@ function WorkflowHistory({ http, workflowObjectId, onClose }: {
           } catch (failure) { toast.error(error(failure)); }
         } })) },
     ]} />
-    {result.state === 'ready' ? <DataTable label={title} rows={rows} columns={columns} rowId={item => item.index} resizable />
+    {result.state === 'ready' ? <PagedDataTable label={title} rows={rows} columns={columns} rowId={item => item.index} resizable />
       : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <StatusPanel kind="loading" />}
   </Modal>;

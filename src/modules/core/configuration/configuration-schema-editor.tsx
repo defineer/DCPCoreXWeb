@@ -14,8 +14,8 @@ import { getConfigurationSchema, saveConfigurationSchema,
 
 export type ConfigurationSchemaTarget = { mode: 'new' } | { mode: 'edit' | 'view'; row: ConfigurationSchemaRow };
 
-export function ConfigurationSchemaEditor({ type, target, canEdit, onClose, onSaved }: {
-  type: ConfigurationTypeRow; target: ConfigurationSchemaTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function ConfigurationSchemaEditor({ type, target, canEdit, canSave, onClose, onSaved }: {
+  type: ConfigurationTypeRow; target: ConfigurationSchemaTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -33,7 +33,7 @@ export function ConfigurationSchemaEditor({ type, target, canEdit, onClose, onSa
   const name = t('Schema', undefined, 'Core');
   const title = target.mode === 'view' ? target.row.version || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal workspace title={title} onClose={() => close.current()}>
-    {result.state === 'ready' ? <SchemaForm detail={result.data} type={type} editable={target.mode !== 'view' && (!id || canEdit)}
+    {result.state === 'ready' ? <SchemaForm detail={result.data} type={type} editable={canSave && target.mode !== 'view' && (!id || canEdit)}
       closeRef={close} onClose={onClose} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

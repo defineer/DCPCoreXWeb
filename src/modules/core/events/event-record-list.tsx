@@ -39,6 +39,7 @@ export function EventRecordList() {
   const exportRequest = useRef<AbortController>(undefined);
   useEffect(() => () => exportRequest.current?.abort(), []);
   const pageSize = Math.max(10, Math.min(60, preferences?.rowsPerPage ?? 20));
+  const pagerPosition = preferences?.gridPagerPosition;
   const { rootGroupId, groupId } = draft;
   const loadChoices = useCallback((signal: AbortSignal) =>
     getEventRecordChoices(http, rootGroupId, groupId, signal), [http, rootGroupId, groupId]);
@@ -118,6 +119,8 @@ export function EventRecordList() {
     setCriteria({ ...draft });
   }
 
+  const pager = <Pagination direct page={page} pageSize={pageSize} total={result.state === 'ready' ? result.data.totalRecords : 0}
+    onPage={next => { select(undefined); setPage(next); }} />;
   return <Page id="EventObjectList" title={t('Event.RecordSearch')}>
     <ListPage resultsTitle={core('EventRecords')}
       tools={<Toolbar operation="EventObjectList" actions={[
@@ -166,10 +169,10 @@ export function EventRecordList() {
       </form>}>
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} /> : <>
+          {(pagerPosition === 'Top' || pagerPosition === 'TopAndBottom') && pager}
           <DataTable label={core('EventRecords')} rows={rows} columns={columns} rowId={row => row.eventKey} selected={selected}
             onSelect={row => select(row.eventKey)} resizable />
-          <Pagination direct page={page} pageSize={pageSize} total={result.state === 'ready' ? result.data.totalRecords : 0}
-            onPage={next => { select(undefined); setPage(next); }} />
+          {pagerPosition !== 'Top' && pager}
         </>}
       </LoadingRegion>
     </ListPage>

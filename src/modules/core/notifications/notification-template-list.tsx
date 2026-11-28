@@ -5,7 +5,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
@@ -29,9 +29,10 @@ export function NotificationTemplateList() {
   const title = t('Notification.Templates');
   const page = 'WebNotificationTemplateList';
   const editor = 'WebNotificationTemplateEdit';
-  const canSave = canPage(editor) && canAction(editor, 'WebSaveNotificationTemplate');
-  const canAdd = canSave && canAction(page, 'WebAddNotificationTemplate');
-  const canEdit = canSave && canAction(page, 'WebEditNotificationTemplate');
+  const canOpenEditor = canPage(editor);
+  const canSave = canAction(editor, 'WebSaveNotificationTemplate');
+  const canAdd = canOpenEditor && canAction(page, 'WebAddNotificationTemplate');
+  const canEdit = canOpenEditor && canAction(page, 'WebEditNotificationTemplate');
   const canView = canPage(editor) && canAction(page, 'WebViewNotificationTemplate');
   const canDelete = canAction(page, 'WebDeleteNotificationTemplate');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) => getTemplates(http, status, signal), [http]);
@@ -92,10 +93,10 @@ export function NotificationTemplateList() {
           { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
         onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {allowed && target && <NotificationTemplateEditor target={target} canEdit={canEdit}
+    {allowed && target && <NotificationTemplateEditor target={target} canEdit={canEdit} canSave={canSave}
       onClose={() => setTarget(undefined)} onSaved={refresh} />}
   </Page>;
 }

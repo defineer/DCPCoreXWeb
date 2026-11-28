@@ -19,8 +19,8 @@ interface MemberEditorData {
   choices: Array<{ id: number; name?: string | null }>;
 }
 
-export function MembershipEditor({ scope, target, allowed, allowEdit, onClose, onSaved }: {
-  scope: MembershipScope; target: MembershipTarget; allowed: boolean; allowEdit: boolean;
+export function MembershipEditor({ scope, target, allowed, allowEdit, canSave, onClose, onSaved }: {
+  scope: MembershipScope; target: MembershipTarget; allowed: boolean; allowEdit: boolean; canSave: boolean;
   onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
@@ -41,15 +41,15 @@ export function MembershipEditor({ scope, target, allowed, allowEdit, onClose, o
   const title = target.mode === 'view' ? noun : t(target.mode === 'new' && !created ? 'Directory.New' : 'Directory.Edit', { name: noun });
   return <Modal title={title} workspace onClose={() => close.current()}>
     {!allowed ? <StatusPanel kind="denied" /> : result.state === 'ready'
-      ? <MembershipEditorForm scope={scope} target={target} data={result.data} allowEdit={allowEdit}
+      ? <MembershipEditorForm scope={scope} target={target} data={result.data} allowEdit={allowEdit} canSave={canSave}
         onClose={onClose} closeRef={close} onSaved={() => { setCreated(true); onSaved(); }} />
       : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <StatusPanel kind="loading" />}
   </Modal>;
 }
 
-function MembershipEditorForm({ scope, target, data, allowEdit, onClose, onSaved, closeRef }: {
-  scope: MembershipScope; target: MembershipTarget; data: MemberEditorData; allowEdit: boolean;
+function MembershipEditorForm({ scope, target, data, allowEdit, canSave, onClose, onSaved, closeRef }: {
+  scope: MembershipScope; target: MembershipTarget; data: MemberEditorData; allowEdit: boolean; canSave: boolean;
   onClose: () => void; onSaved: () => void; closeRef: { current: () => void };
 }) {
   const { http } = useSession();
@@ -68,7 +68,7 @@ function MembershipEditorForm({ scope, target, data, allowEdit, onClose, onSaved
     isActive: detail?.isActive ?? true, isDeleted: detail?.isDeleted ?? false,
   });
   const value = form.values;
-  const editable = target.mode !== 'view' && (value.id === 0 || allowEdit);
+  const editable = canSave && target.mode !== 'view' && (value.id === 0 || allowEdit);
   const disabled = !editable || form.pending;
   const core = (key: string) => t(key, undefined, 'Core');
   const label = core(scope.kind === 'userRole' ? 'Role' : 'User');

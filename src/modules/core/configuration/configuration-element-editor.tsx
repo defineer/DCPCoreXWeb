@@ -17,8 +17,8 @@ const emptyElement: ConfigurationElement = {
   id: 0, configurationElementTypeId: 0, licenceTypeId: 0, listOrder: 0, isActive: true, isDeleted: false, isSystemElement: false,
 };
 
-export function ConfigurationElementEditor({ target, tree, choices, canEdit, onClose, onSaved }: {
-  target: ElementTarget; tree: boolean; choices: ConfigurationElementChoices; canEdit: boolean;
+export function ConfigurationElementEditor({ target, tree, choices, canEdit, canSave, onClose, onSaved }: {
+  target: ElementTarget; tree: boolean; choices: ConfigurationElementChoices; canEdit: boolean; canSave: boolean;
   onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
@@ -39,7 +39,7 @@ export function ConfigurationElementEditor({ target, tree, choices, canEdit, onC
   const title = target.mode === 'view' ? target.row.elementName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal workspace title={title} onClose={() => close.current()}>
     {result.state === 'ready' ? <ElementForm detail={result.data} choices={choices} tree={tree} parentName={parentName}
-      editable={target.mode !== 'view' && (!id || canEdit)} closeRef={close} onClose={onClose} onSaved={value => {
+      editable={canSave && target.mode !== 'view' && (!id || canEdit)} closeRef={close} onClose={onClose} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();
         else if (!id) setCreated(value);

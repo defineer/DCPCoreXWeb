@@ -62,8 +62,8 @@ export function AccessModelTreeList({ scope }: { scope: AccessModelScope }) {
   const { canAction, canPage } = useWorkspace();
   const canSave = canAction('WebAccessModelTreeList', 'WebSaveAccessModels');
   const canView = canPage('WebAccessModelEdit') && canAction('WebAccessModelTreeList', 'WebViewAccessModel');
-  const canEdit = canPage('WebAccessModelEdit') && canAction('WebAccessModelTreeList', 'WebEditAccessModel') &&
-    canAction('WebAccessModelEdit', 'WebSaveAccessModel');
+  const canEdit = canPage('WebAccessModelEdit') && canAction('WebAccessModelTreeList', 'WebEditAccessModel');
+  const canSaveIndividual = canAction('WebAccessModelEdit', 'WebSaveAccessModel');
   const [status, setStatus] = useState<RecordStatus>(recordStatus.active);
   const [editing, setEditing] = useState(false);
   const [target, setTarget] = useState<AccessModelTarget>();
@@ -90,7 +90,7 @@ export function AccessModelTreeList({ scope }: { scope: AccessModelScope }) {
       : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <LoadingRegion loading><StatusPanel kind="loading" /></LoadingRegion>}
     {target && (target.mode === 'edit' ? canEdit : canView) && <AccessModelDialog scope={scope} target={target}
-      editable={target.mode === 'edit'} onClose={() => setTarget(undefined)} onSaved={result.refresh} />}
+      editable={target.mode === 'edit' && canSaveIndividual} onClose={() => setTarget(undefined)} onSaved={result.refresh} />}
   </>;
 }
 
@@ -212,7 +212,7 @@ function AccessModelResults({ scope, initial, status, editable, canSave, canView
             status: core(grant.isDeleted ? 'Deleted' : grant.isActive ? 'Active' : 'Inactive') }),
         }))]} />}
     </RecordStatusQuery>}>
-    <TreeTable label={title} columns={columns} rows={editable ? form.values.rows : initial}
+    <TreeTable onPageChange={() => { select(undefined); selectGrant(0); }} label={title} columns={columns} rows={editable ? form.values.rows : initial}
       nameColumn="name" rowId={row => row.id} parentId={row => row.parentConfigurationElementId}
       selected={selectedId} onSelect={canView || canEdit || canSave ? row => {
         select(row.id);

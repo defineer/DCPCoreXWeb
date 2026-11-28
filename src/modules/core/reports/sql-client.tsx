@@ -5,7 +5,7 @@ import { useSession } from '@/app/session';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { LoadingRegion, Page, PageGroup, StatusPanel } from '@/shared/ui/page';
 import { SelectField, TextAreaField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { Toolbar } from '@/shared/ui/toolbar';
@@ -83,7 +83,7 @@ export function SqlClient() {
     </PageGroup>
     <LoadingRegion loading={pending}>
       {failure ? <StatusPanel kind="error" error={failure} /> : rows && <PageGroup title={t('Report.Results')}>
-        {rows.length ? <DataTable label={t('Report.Results')} rows={rows.map((values, index) => ({ values, index }))}
+        {rows.length ? <PagedDataTable pagerPosition="Bottom" label={t('Report.Results')} rows={rows.map((values, index) => ({ values, index }))}
           columns={columns} rowId={row => row.index} resizable /> : <StatusPanel kind="empty" />}
       </PageGroup>}
     </LoadingRegion>

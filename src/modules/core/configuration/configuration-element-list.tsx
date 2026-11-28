@@ -6,7 +6,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page, StatusPanel } from '@/shared/ui/page';
 import { Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -62,8 +62,8 @@ function ElementCatalog({ tree }: { tree: boolean }) {
           editorPage="WebConfigurationElementEdit" saveAction="WebSaveConfigurationElement" load={load} columns={columns}
           requiresParent={row => row.isActive} treeParent={tree ? row => row.parentConfigurationElementId ?? 0 : undefined}
           name={row => row.elementName || String(row.id)} onRemove={row => deleteConfigurationElement(http, tree, row.id)}
-          renderEditor={(target, canEdit, close, refresh) => <ConfigurationElementEditor target={target} tree={tree}
-            choices={choices.data} canEdit={canEdit} onClose={close} onSaved={refresh} />}
+          renderEditor={(target, canEdit, canSave, close, refresh) => <ConfigurationElementEditor target={target} tree={tree}
+            choices={choices.data} canEdit={canEdit} canSave={canSave} onClose={close} onSaved={refresh} />}
           related={canListVersions ? {
             open: setVersionElement, key: versions, label: core('Versions'), icon: <History aria-hidden="true" />,
           } : undefined}
@@ -150,7 +150,7 @@ function ConfigurationVersionDialog({ tree, element, onClose }: {
           exportAction(rows, !busy),
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id}
         selected={selected} onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
     {target && (target.mode === 'new' ? canAdd : target.mode === 'edit' ? canEdit : canView) && <ConfigurationVersionEditor

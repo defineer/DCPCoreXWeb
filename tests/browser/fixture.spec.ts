@@ -136,7 +136,8 @@ const ownerResponses: Record<string, unknown> = {
   'aiframework/getproviderssimple': [],
   'aiframework/getmodelssimple': [],
   'workflow/getworkflowinbox': [workflowInboxRow],
-  'workflow/getobjectworkflowhistory': [{ workflowAction: 'Next', stateName: 'In progress', startDate: date, userName: 'Ada' }],
+  'workflow/getobjectworkflowhistory': [{ workflowAction: 'Next', stateName: 'In progress', stateKeyName: 'InProgress',
+    startDate: date, userName: 'Ada' }],
   'report/connections': ['FixtureReportReadOnly'],
   'report/executesqlcommand': [{ 'Value': 'Fixture result' }],
 };
@@ -589,6 +590,7 @@ for (const viewport of responsiveSizes) {
     await page.getByRole('row', { name: /Fixture object/ }).click();
     await page.getByRole('button', { name: 'Workflow history', exact: true }).click();
     const history = page.getByRole('dialog', { name: 'Workflow history' });
+    await expect(history.getByRole('cell', { name: 'InProgress', exact: true })).toBeVisible();
     await expectWithinViewport(history, viewport, true);
     await expectWithinViewport(history.getByRole('button', { name: 'Refresh' }), viewport);
     await expectWithinViewport(history.getByRole('table').locator('..'), viewport);
@@ -601,6 +603,42 @@ for (const viewport of responsiveSizes) {
     await expectNoPageOverflow(page, viewport.width);
   });
 }
+
+for (const viewport of responsiveSizes) test('keeps Role New and Edit available with read-only forms and honors grid preferences on ' + viewport.name, async ({ page }) => {
+  await page.setViewportSize(viewport);
+  await mockApi(page, { excludedGrants: ['WebSaveRole'] });
+  await page.route('**/api/userservice/getuserpreferencesweb?*', route => route.fulfill({
+    json: { ...preferences, rowsPerPage: 10, gridPagerPosition: 'Top' },
+  }));
+  await page.route('**/api/roleservice/getroles', route => route.fulfill({
+    json: [{ id: 9, roleName: 'Operations', isActive: true },
+      ...Array.from({ length: 10 }, (_, index) => ({ id: 100 + index, roleName: 'Test role ' + (index + 1), isActive: true }))],
+  }));
+  await page.goto('/rolelistpage');
+  const table = page.getByRole('table');
+  await expect(table.getByRole('row')).toHaveCount(11);
+  const pager = page.getByText('Page 1 of 2 · 11 records');
+  await expect(pager).toBeVisible();
+  expect((await pager.boundingBox())!.y).toBeLessThan((await table.boundingBox())!.y);
+  const edit = page.getByRole('button', { name: 'Edit', exact: true });
+  await table.getByRole('row', { name: /Operations/ }).click();
+  await expect(edit).toBeEnabled();
+  await page.locator('.workspace-pager').getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(table.getByRole('row', { name: /Test role 10/ })).toBeVisible();
+  await expect(edit).toBeDisabled();
+  await page.locator('.workspace-pager').getByRole('button', { name: 'Previous', exact: true }).click();
+  await table.getByRole('row', { name: /Operations/ }).click();
+  await edit.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Operations');
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).not.toBeEditable();
+  await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+  await dialog.getByRole('group', { name: 'Actions' }).getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).not.toBeEditable();
+  await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+  await expectNoPageOverflow(page, viewport.width);
+});
 
 test('uses the Workflow owner destination for Complete and Cancel and hides unsupported Open targets', async ({ page }) => {
   await mockApi(page, { ownerPages: true });
@@ -662,6 +700,14 @@ test('uploads selected documents separately and preserves exact document IDs', a
   const documents = page.getByRole('dialog', { name: 'Documents' });
   await expect(documents.getByRole('cell', { name: '9007199254740993' })).toBeVisible();
   await expect(documents.getByRole('cell', { name: 'Fixture metadata' })).toBeVisible();
+  await documents.getByRole('button', { name: 'Export', exact: true }).click();
+  const exported = page.waitForEvent('download');
+  await documents.getByRole('button', { name: 'CSV', exact: true }).click();
+  const csv = await exported;
+  expect(csv.suggestedFilename()).toBe('documents.csv');
+  const content = await readFile((await csv.path())!, 'utf8');
+  expect(content).toContain('9007199254740993');
+  expect(content).toContain('Fixture metadata');
   const downloaded = page.waitForRequest('**/api/document/downloadobjectdocument?*');
   await documents.getByRole('button', { name: 'Preview' }).click();
   expect(new URL((await downloaded).url()).searchParams.get('documentObjectId')).toBe('9007199254740993');
@@ -730,6 +776,19 @@ test('localizes Turkish management menus and the Workflow workgroup column', asy
   await nav.locator('summary').filter({ hasText: 'Uyarı Yönetimi' }).click();
   await expect(nav.getByRole('link', { name: 'Uyarılar' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Çalışma Grubu', exact: true })).toBeVisible();
+});
+
+test('shows the current customer name and full name on Home independently of the display name', async ({ page }) => {
+  await mockApi(page);
+  await page.route('**/api/session', route => route.fulfill({ json: {
+    ...signedIn, customerName: 'Acme Research', nameSurname: 'Ada Byron Lovelace', displayName: 'Ada Lovelace',
+  } }));
+  await page.goto('/index');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('link', { name: 'Contact', exact: true })).toHaveText('Acme Research');
+  await expect(main.getByText('Ada Byron Lovelace', { exact: true })).toBeVisible();
+  await expect(main.getByText('Ada Lovelace', { exact: true })).toHaveCount(0);
+  await expect(main.getByRole('link', { name: 'My Profile', exact: true })).toHaveText(signedIn.userName);
 });
 
 test('opens a configured cache value through the Cache owner', async ({ page }) => {
@@ -1187,6 +1246,34 @@ for (const viewport of responsiveSizes) {
     await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(grid.getByRole('cell', { name: 'Updated Institute' })).toHaveCount(0);
     await expectNoPageOverflow(page, viewport.width);
+  });
+}
+
+for (const editor of [
+  { feature: 'Asset', path: '/assetlistpage', id: '9007199254740993',
+    dialog: 'Edit Asset', field: 'Name', role: 'textbox', value: 'Laptop' },
+  { feature: 'Customer', path: '/customerlistpage', id: '2',
+    dialog: 'Edit Example Institute', field: 'Name', role: 'textbox', value: 'Example Institute' },
+  { feature: 'Event', path: '/eventlistpage', id: '46',
+    dialog: 'Edit Event', field: 'Severity', role: 'combobox', value: 'Information' },
+  { feature: 'Licence', path: '/licencelistpage', id: '3',
+    dialog: 'Edit Licence', field: 'Licence', role: 'textbox', value: 'Core Annual' },
+  { feature: 'CustomerLicence', path: '/customerlicencelistpage?customerId=1', id: '81',
+    dialog: 'Edit Customer Licence', field: 'User Count', role: 'spinbutton', value: '50' },
+] as const) {
+  test(`opens the ${editor.feature} editor with Edit and without View or Save`, async ({ page }) => {
+    await mockApi(page, { customerId: 0, assetManagement: true, customerMaintenance: true,
+      eventManagement: true, licenceMaintenance: true, customerLicenceMaintenance: true,
+      excludedGrants: ['WebView' + editor.feature, 'WebSave' + editor.feature] });
+    await page.goto(editor.path);
+    await page.getByRole('table').getByRole('button', { name: editor.id, exact: true }).click();
+    await expect(page.getByRole('button', { name: 'View', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: editor.dialog, exact: true });
+    const field = dialog.getByRole(editor.role, { name: editor.field, exact: true });
+    await expect(field).toHaveValue(editor.value);
+    await expect(field).not.toBeEditable();
+    await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
   });
 }
 

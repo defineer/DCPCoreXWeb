@@ -13,8 +13,8 @@ import { getAsset, getAssetTypes, saveAsset, type AssetDetail, type AssetRow, ty
 export type AssetTarget = { mode: 'new' } | { mode: 'edit' | 'view'; row: AssetRow };
 const emptyAsset: AssetDetail = { id: '0', assetTypeId: 0, isActive: true, isDeleted: false };
 
-export function AssetEditor({ target, canEdit, onClose, onSaved }: {
-  target: AssetTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function AssetEditor({ target, canEdit, canSave, onClose, onSaved }: {
+  target: AssetTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -34,7 +34,7 @@ export function AssetEditor({ target, canEdit, onClose, onSaved }: {
   const name = t('Asset', undefined, 'Core');
   const title = target.mode === 'view' ? target.row.assetName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal title={title} workspace onClose={() => close.current()}>
-    {result.state === 'ready' ? <AssetForm {...result.data} editable={target.mode !== 'view' && (!id || canEdit)}
+    {result.state === 'ready' ? <AssetForm {...result.data} editable={canSave && (target.mode !== 'view' && (!id || canEdit))}
       onClose={onClose} closeRef={close} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

@@ -5,9 +5,9 @@ import { useWorkspace } from '@/app/workspace';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, ListPage } from '@/shared/ui/data-table';
+import { PagedDataTable, ListPage } from '@/shared/ui/data-table';
 import { LoadingRegion, Page, StatusPanel } from '@/shared/ui/page';
-import { SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
+import { Button, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { Toolbar } from '@/shared/ui/toolbar';
 import { toast } from '@/shared/ui/toasts';
 import { coreRoutes } from '../routes';
@@ -71,14 +71,23 @@ export function WorkflowInbox() {
           } })) },
         { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
       ]} />}
-      query={<SelectField label={core('Status')} value={status} onChange={value => {
+      query={<form className="workspace-record-status-query workspace-fields" onSubmit={event => {
+        event.preventDefault();
         select(undefined);
-        setStatus(Number(value));
-      }} options={[{ value: 0, label: core('All') }, { value: 1, label: core('Active') },
-        { value: 2, label: core('Completed') }, { value: 3, label: core('Cancelled') }]} />}>
+        result.refresh();
+      }}>
+        <SelectField label={core('Status')} value={status} onChange={value => {
+          select(undefined);
+          setStatus(Number(value));
+        }} options={[{ value: 0, label: core('All') }, { value: 1, label: core('Active') },
+          { value: 2, label: core('Completed') }, { value: 3, label: core('Cancelled') }]} />
+        <Button type="submit" className="workspace-search" disabled={result.state === 'loading'}>
+          <WorkspaceIcon name="search" />{core('Query')}
+        </Button>
+      </form>}>
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
-          : <DataTable label={title} rows={rows} columns={columns} rowId={item => item.workflowObjectId} selected={selection}
+          : <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={item => item.workflowObjectId} selected={selection}
             onSelect={item => select(item.workflowObjectId)} resizable />}
       </LoadingRegion>
     </ListPage>

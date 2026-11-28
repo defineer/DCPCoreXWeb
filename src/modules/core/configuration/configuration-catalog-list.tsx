@@ -3,7 +3,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
@@ -18,7 +18,7 @@ export function CatalogList<T extends { id: number }>({ title, subject, filename
   title: string; subject: string; filename: string; columns: CatalogColumn<T>[];
   name: (row: T) => string; load: (status: RecordStatus, signal: AbortSignal) => Promise<T[]>;
   allowAdd?: boolean; onRemove: (row: T) => Promise<void>; onClose?: () => void;
-  renderEditor: (target: CatalogTarget<T>, canEdit: boolean, close: () => void, refresh: () => void) => ReactNode;
+  renderEditor: (target: CatalogTarget<T>, canEdit: boolean, canSave: boolean, close: () => void, refresh: () => void) => ReactNode;
   related?: { open: (row: T) => void; key: string; label: string; icon: ReactNode };
   editorPage?: string; saveAction?: string; requiresParent?: (row: T) => boolean;
   treeParent?: (row: T) => number; filters?: ReactNode;
@@ -35,9 +35,10 @@ export function CatalogList<T extends { id: number }>({ title, subject, filename
   const page = 'Web' + subject + 'List';
   const editor = editorPage ?? 'Web' + subject + 'Edit';
   const permitted = (verb: string) => canAction(page, 'Web' + verb + subject);
-  const canSave = canPage(editor) && canAction(editor, saveAction ?? 'WebSave' + subject);
-  const canAdd = canSave && permitted('Add') && allowAdd;
-  const canEdit = canSave && permitted('Edit');
+  const canOpenEditor = canPage(editor);
+  const canSave = canAction(editor, saveAction ?? 'WebSave' + subject);
+  const canAdd = canOpenEditor && permitted('Add') && allowAdd;
+  const canEdit = canOpenEditor && permitted('Edit');
   const canView = canPage(editor) && permitted('View');
   const canDelete = permitted('Delete');
   const refresh = () => setReload(version => version + 1);
@@ -90,11 +91,11 @@ export function CatalogList<T extends { id: number }>({ title, subject, filename
         ];
       }}>
       {rows => treeParent
-        ? <TreeTable label={title} rows={rows} columns={columns} rowId={row => row.id} parentId={treeParent}
+        ? <TreeTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} parentId={treeParent}
           nameColumn="name" selected={selection} onSelect={row => select(row.id)} />
-        : <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+        : <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
           onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {allowed && target && renderEditor(target, canEdit, () => setTarget(undefined), refresh)}
+    {allowed && target && renderEditor(target, canEdit, canSave, () => setTarget(undefined), refresh)}
   </>;
 }

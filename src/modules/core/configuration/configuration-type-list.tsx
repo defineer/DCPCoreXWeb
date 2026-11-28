@@ -44,8 +44,8 @@ export function ConfigurationTypeList() {
     {common ? <CatalogList title={title} subject={typeKey} filename="configuration-element-types"
       load={load} columns={columns} name={row => row.typeName || String(row.id)}
       onRemove={row => deleteConfigurationType(http, row.id)}
-      renderEditor={(target, canEdit, close, refresh) =>
-        <ConfigurationTypeEditor target={target} canEdit={canEdit} onClose={close} onSaved={refresh} />}
+      renderEditor={(target, canEdit, canSave, close, refresh) =>
+        <ConfigurationTypeEditor target={target} canEdit={canEdit} canSave={canSave} onClose={close} onSaved={refresh} />}
       onClose={() => navigate('/index')}
       related={canViewSchemas ? {
         open: setSchemaType, key: schemaAction, label: core('Schema'), icon: <ListTree aria-hidden="true" />,
@@ -79,7 +79,7 @@ function TypeSchemas({ type, onClose }: { type: ConfigurationTypeRow; onClose: (
     <CatalogList title={title} subject={schemaKey} filename="configuration-schema-versions" allowAdd={type.isActive}
       load={load} columns={columns} name={row => row.version || String(row.id)}
       onRemove={row => deleteConfigurationSchema(http, type.id, row.id)}
-      renderEditor={(target, canEdit, close, refresh) =>
-        <ConfigurationSchemaEditor type={type} target={target} canEdit={canEdit} onClose={close} onSaved={refresh} />} />
+      renderEditor={(target, canEdit, canSave, close, refresh) =>
+        <ConfigurationSchemaEditor type={type} target={target} canEdit={canEdit} canSave={canSave} onClose={close} onSaved={refresh} />} />
   </Modal>;
 }

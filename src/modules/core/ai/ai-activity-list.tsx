@@ -6,7 +6,7 @@ import type { SimpleDataView } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, ListPage, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, ListPage, type Column } from '@/shared/ui/data-table';
 import { DefinitionList, LoadingRegion, Page, PageGroup, StatusPanel } from '@/shared/ui/page';
 import { Button, Field, Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { Toolbar } from '@/shared/ui/toolbar';
@@ -115,7 +115,7 @@ export function AiActivityList() {
       </form>}>
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
-          : <DataTable label={title} rows={rows} columns={columns} rowId={item => item.id} selected={selected}
+          : <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={item => item.id} selected={selected}
             onSelect={item => select(item.id)} resizable />}
       </LoadingRegion>
     </ListPage>

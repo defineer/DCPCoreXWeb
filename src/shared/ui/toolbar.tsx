@@ -49,7 +49,8 @@ export function Toolbar({ actions, operation }: { actions: ToolbarAction[]; oper
       {action.actions && expanded === action.key && <div className="workspace-toolbar-menu z-20 mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-card p-1 shadow-lg"
         onKeyDown={event => { if (event.key === 'Escape') setExpanded(undefined); }}>
         {action.actions.filter(eligible).map(child => <Button key={child.key} variant="ghost"
-          className="justify-start" disabled={child.enabled === false} onClick={() => invoke(child)}>{child.icon}{child.label}</Button>)}
+          className="justify-start" disabled={action.enabled === false || child.enabled === false}
+          onClick={() => { if (action.enabled !== false) invoke(child); }}>{child.icon}{child.label}</Button>)}
       </div>}
     </div>)}
   </ToolbarBar>;

@@ -20,8 +20,8 @@ interface LicenceValues {
   id: number; licenceName: string; period: string; description: string; isActive: boolean; isDeleted: boolean; mappings: Mapping[];
 }
 
-export function LicenceEditor({ id, canEdit, onClose, onSaved }: {
-  id?: number; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function LicenceEditor({ id, canEdit, canSave, onClose, onSaved }: {
+  id?: number; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -32,15 +32,15 @@ export function LicenceEditor({ id, canEdit, onClose, onSaved }: {
   const load = useCallback(async (signal: AbortSignal) => {
     if (!persistedId || !canEdit) return { detail: created ?? newLicence, applications: [] };
     const [detail, applications] = await Promise.all([
-      getLicence(http, persistedId, signal), getLicenceApplicationChoices(http, signal),
+      getLicence(http, persistedId, signal), canSave ? getLicenceApplicationChoices(http, signal) : Promise.resolve([]),
     ]);
     return { detail, applications };
-  }, [http, persistedId, canEdit, created]);
+  }, [http, persistedId, canEdit, canSave, created]);
   const resource = useResource(load);
   if (resource.state !== 'ready') close.current = onClose;
   const name = t('Licence', undefined, 'Core');
   return <Modal title={t(persistedId ? 'Directory.Edit' : 'Directory.New', { name })} workspace onClose={() => close.current()}>
-    {resource.state === 'ready' ? <LicenceForm {...resource.data} editable={!persistedId || canEdit}
+    {resource.state === 'ready' ? <LicenceForm {...resource.data} editable={canSave && (!persistedId || canEdit)}
       closeRef={close} onClose={onClose} onSaved={record => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

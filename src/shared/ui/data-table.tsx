@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, SearchX } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
+import { useWorkspace } from '@/app/workspace';
 import { useGlobalization } from '../globalization';
 import { Button } from './primitives';
 import { PageGroup } from './page';
@@ -13,11 +14,13 @@ function columnWidths(handle: HTMLElement) {
   return Array.from(handle.closest('tr')?.cells ?? [], cell => cell.getBoundingClientRect().width);
 }
 
-export function DataTable<T>({ rows, columns, label, rowId, selected, onSelect, sort, onSort, resizable }: {
+interface TableProps<T> {
   rows: T[]; columns: Column<T>[]; label: string; rowId: (row: T) => string | number;
   selected?: string | number; onSelect?: (row: T) => void;
   sort?: Sort; onSort?: (sort: Sort) => void; resizable?: boolean;
-}) {
+}
+
+export function DataTable<T>({ rows, columns, label, rowId, selected, onSelect, sort, onSort, resizable }: TableProps<T>) {
   const { t } = useGlobalization();
   const columnKeys = JSON.stringify(columns.map(column => column.key));
   const [size, setSize] = useState<{ keys: string; widths: number[] }>();
@@ -90,6 +93,27 @@ export function DataTable<T>({ rows, columns, label, rowId, selected, onSelect, 
       </tbody>
     </table>
   </div>;
+}
+
+export function PagedDataTable<T>({ rows, pagerPosition, onPageChange, ...table }: TableProps<T> & {
+  pagerPosition?: 'Top' | 'Bottom';
+  onPageChange?: () => void;
+}) {
+  const { preferences } = useWorkspace();
+  const pageSize = Math.max(10, Math.min(60, preferences?.rowsPerPage ?? 20));
+  const position = pagerPosition ?? preferences?.gridPagerPosition;
+  const [requestedPage, setPage] = useState(1);
+  const page = Math.min(requestedPage, Math.max(1, Math.ceil(rows.length / pageSize)));
+  const start = (page - 1) * pageSize;
+  const pager = <Pagination page={page} pageSize={pageSize} total={rows.length} onPage={next => {
+    onPageChange?.();
+    setPage(next);
+  }} />;
+  return <>
+    {(position === 'Top' || position === 'TopAndBottom') && pager}
+    <DataTable {...table} rows={rows.slice(start, start + pageSize)} />
+    {position !== 'Top' && pager}
+  </>;
 }
 
 export function Pagination({ page, pageSize, total, onPage, direct }: {

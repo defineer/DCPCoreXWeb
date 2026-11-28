@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useSession } from '@/app/session';
+import { useWorkspace } from '@/app/workspace';
 import { pagedResponse } from '@/shared/contracts';
 import { useResource } from '@/shared/resource';
 import { useGlobalization } from '@/shared/globalization';
+import { localDateInput } from '@/shared/zoned-dates';
 import { DataTable, ListPage, Pagination } from '@/shared/ui/data-table';
 import { Button, Field, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
 import { LoadingRegion, Page, StatusPanel } from '@/shared/ui/page';
@@ -15,16 +17,16 @@ import { toast } from '@/shared/ui/toasts';
 const sessionRow = z.object({ startDate: z.string(), endDate: z.string().nullish(),
   sessionFailedReason: z.string().nullish(), isSuccess: z.boolean() });
 type SessionRow = z.infer<typeof sessionRow>;
-const pageSize = 20;
-const calendarDate = (date: Date) => date.toLocaleDateString('sv-SE');
-
 export function SessionsPage() {
   const { http, state } = useSession();
-  const { t, date, error } = useGlobalization();
+  const { preferences } = useWorkspace();
+  const { t, date, error, timeZone } = useGlobalization();
+  const pageSize = Math.max(10, Math.min(60, preferences?.rowsPerPage ?? 20));
+  const pagerPosition = preferences?.gridPagerPosition;
   const navigate = useNavigate();
   const userId = state.stage === 'authenticated' ? state.session.userId : 0;
   const [criteria, setCriteria] = useState(() => {
-    const today = calendarDate(new Date());
+    const today = localDateInput(new Date().toISOString(), timeZone);
     return { localStartDate: today.slice(0, 8) + '01', localEndDate: today, success: false, userSessionFailedReason: 0 };
   });
   const [query, setQuery] = useState(criteria);
@@ -35,11 +37,12 @@ export function SessionsPage() {
       ...query, userId, userSessionFailedReason: query.success ? null : (query.userSessionFailedReason || null),
       startDate: query.localStartDate + 'T00:00:00', endDate: query.localEndDate + 'T23:59:59',
       dataFilter: { page, pageSize },
-    } }), [http, query, page, userId]);
+    } }), [http, query, page, pageSize, userId]);
   const result = useResource(load);
   const title = t('Sessions', undefined, 'Core');
   const rows = result.state === 'ready' ? result.data.data : [];
   const displayed = result.state === 'ready' ? result.data : result.state === 'loading' ? result.previousData : undefined;
+  const pager = displayed && <Pagination page={page} pageSize={pageSize} total={displayed.totalRecords} onPage={setPage} direct />;
   const width = query.success ? '33.33%' : '25%';
   const columns = [
     { key: 'startDate', title: t('Field.StartDate'), render: (row: SessionRow) => date(row.startDate), width },
@@ -88,8 +91,9 @@ export function SessionsPage() {
     </form>}>
       {result.state === 'error' && <StatusPanel kind="error" error={result.error} retry={result.refresh} />}
       {result.state !== 'error' && <LoadingRegion loading={result.state === 'loading'}>
+        {(pagerPosition === 'Top' || pagerPosition === 'TopAndBottom') && pager}
         <DataTable label={title} rows={displayed?.data ?? []} rowId={row => row.startDate + ':' + row.endDate} columns={columns} resizable />
-        {displayed && <Pagination page={page} pageSize={pageSize} total={displayed.totalRecords} onPage={setPage} direct />}
+        {pagerPosition !== 'Top' && pager}
       </LoadingRegion>}
     </ListPage>
   </Page>;

@@ -3,7 +3,7 @@ import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
@@ -27,9 +27,10 @@ export function LicenceList() {
   const deleting = useRef(false);
   const common = state.stage === 'authenticated' && state.session.customerId === 0;
   const canView = canPage('WebLicenceEdit') && canAction('WebLicenceList', 'WebViewLicence');
-  const canSave = common && canAction('WebLicenceEdit', 'WebSaveLicence');
-  const canAdd = canSave && canAction('WebLicenceList', 'WebAddLicence');
-  const canEdit = canSave && canAction('WebLicenceList', 'WebEditLicence');
+  const canOpenEditor = common && canPage('WebLicenceEdit');
+  const canSave = canAction('WebLicenceEdit', 'WebSaveLicence');
+  const canAdd = canOpenEditor && canAction('WebLicenceList', 'WebAddLicence');
+  const canEdit = canOpenEditor && canAction('WebLicenceList', 'WebEditLicence');
   const canDelete = common && canAction('WebLicenceList', 'WebDeleteLicence');
   const core = (key: string) => t(key, undefined, 'Core');
   const title = core('Licences');
@@ -76,11 +77,11 @@ export function LicenceList() {
           enabled, run: () => { if (row) setTarget(row); } },
       ];
     }}>
-      {rows => <DataTable label={title} columns={columns} rows={rows} rowId={row => row.id} resizable
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} columns={columns} rows={rows} rowId={row => row.id} resizable
         selected={selected} onSelect={canView || canEdit || canDelete ? row => select(row.id) : undefined} />}
     </RecordStatusResults>
     {target && canView && <LicenceDetail target={{ row: target }} onClose={() => setTarget(undefined)} />}
     {editor !== undefined && (editor ? canEdit : canAdd) &&
-      <LicenceEditor id={editor || undefined} canEdit={canEdit} onClose={() => setEditor(undefined)} onSaved={refresh} />}
+      <LicenceEditor id={editor || undefined} canEdit={canEdit} canSave={canSave} onClose={() => setEditor(undefined)} onSaved={refresh} />}
   </Page>;
 }

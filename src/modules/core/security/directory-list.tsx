@@ -7,7 +7,7 @@ import { useFormStateService } from '@/shared/forms';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { useGlobalization } from '@/shared/globalization';
 import type { Column } from '@/shared/ui/data-table';
-import { DataTable } from '@/shared/ui/data-table';
+import { PagedDataTable } from '@/shared/ui/data-table';
 import { Page } from '@/shared/ui/page';
 import { Modal, WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
@@ -63,9 +63,10 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
   const access = canPage('WebAccessModelTreeList') && canAction(pageKey, accessAction);
   const relatedTitle = related?.kind === 'users' ? core('Users') : core('AccessModels');
   const canView = canPage(details.page) && canAction(pageKey, details.grant);
-  const canSave = maintenance && canAction(details.page, maintenance.saveAction);
-  const canAdd = Boolean(maintenance && canSave && canAction(pageKey, maintenance.addAction));
-  const canEdit = Boolean(maintenance && canSave && canAction(pageKey, maintenance.editAction));
+  const canOpenEditor = canPage(details.page);
+  const canSave = Boolean(maintenance && canAction(details.page, maintenance.saveAction));
+  const canAdd = Boolean(maintenance && canOpenEditor && canAction(pageKey, maintenance.addAction));
+  const canEdit = Boolean(maintenance && canOpenEditor && canAction(pageKey, maintenance.editAction));
   const canDelete = Boolean(maintenance && canAction(pageKey, maintenance.deleteAction));
   const refresh = () => setReloadVersion(version => version + 1);
 
@@ -125,13 +126,13 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
         { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
       ];
     }}>
-      {rows => parent ? <TreeTable label={rowsTitle} columns={columns} rows={rows} rowId={row => row.id} parentId={parent.id}
+      {rows => parent ? <TreeTable onPageChange={() => setSelected(undefined)} label={rowsTitle} columns={columns} rows={rows} rowId={row => row.id} parentId={parent.id}
         nameColumn="name" selected={selectedId} onSelect={row => setSelected(row.id)} />
-        : <DataTable label={rowsTitle} columns={columns} rows={rows} rowId={row => row.id}
+        : <PagedDataTable onPageChange={() => setSelected(undefined)} label={rowsTitle} columns={columns} rows={rows} rowId={row => row.id}
           selected={selectedId} onSelect={row => setSelected(row.id)} resizable />}
     </RecordStatusResults>
     {editor && maintenance && <DirectoryEditorDialog target={editor} noun={maintenance.noun} allowNew={canAdd}
-      allowEdit={canEdit} load={details.load} save={maintenance.save} onSaved={refresh} onClose={() => setEditor(undefined)} />}
+      allowEdit={canEdit} canSave={canSave} load={details.load} save={maintenance.save} onSaved={refresh} onClose={() => setEditor(undefined)} />}
     {detail && canView && <DirectoryDetailDialog title={name(detail) || String(detail.id)} id={detail.id}
       load={details.load} onClose={() => setDetail(undefined)} />}
     {related && (related.kind === 'users' ? users : access) && <Modal

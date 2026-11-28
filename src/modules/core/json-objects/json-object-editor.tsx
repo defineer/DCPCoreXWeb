@@ -14,8 +14,8 @@ import { getJsonChoices, getJsonObject, saveJsonObject, type JsonObjectChoices,
 export type JsonTarget = { mode: 'new'; selectedType: number } | { mode: 'edit' | 'view'; row: JsonObjectRow };
 const blankChoices: JsonObjectChoices = { schemas: [], parents: [] };
 
-export function JsonObjectEditor({ target, types, canEdit, onClose, onSaved }: {
-  target: JsonTarget; types: JsonObjectType[]; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function JsonObjectEditor({ target, types, canEdit, canSave, onClose, onSaved }: {
+  target: JsonTarget; types: JsonObjectType[]; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -34,7 +34,7 @@ export function JsonObjectEditor({ target, types, canEdit, onClose, onSaved }: {
   return <Modal workspace title={target.mode === 'view' ? target.row.name || name : t(id ? 'Directory.Edit' : 'Directory.New', { name })}
     onClose={() => close.current()}>
     {result.state === 'ready' ? <JsonForm detail={result.data} types={types}
-      editable={target.mode !== 'view' && (!id || canEdit)} closeRef={close} onClose={onClose} onSaved={value => {
+      editable={canSave && (target.mode !== 'view' && (!id || canEdit))} closeRef={close} onClose={onClose} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();
         else if (!id) setCreated(value);

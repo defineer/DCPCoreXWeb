@@ -12,7 +12,7 @@ import { toast } from '@/shared/ui/toasts';
 import { getCustomer, getCustomerTypes, saveCustomer, type CustomerDetail, type CustomerRow } from './customer-api';
 
 export type CustomerTarget = { mode: 'new' } | { row: CustomerRow; mode: 'view' | 'edit' };
-interface EditorProps { target: CustomerTarget; canEdit: boolean; canView: boolean; onClose: () => void; onSaved: () => void }
+interface EditorProps { target: CustomerTarget; canEdit: boolean; canSave: boolean; canView: boolean; onClose: () => void; onSaved: () => void }
 
 export function CustomerEditor(props: EditorProps) {
   const { http } = useSession();
@@ -34,7 +34,7 @@ export function CustomerEditor(props: EditorProps) {
   const mode = target.mode === 'new' && id ? (props.canEdit ? 'edit' : 'view') : target.mode;
   const title = mode === 'view' ? name : t(mode === 'new' ? 'Directory.New' : 'Directory.Edit', { name });
   return <Modal title={title} workspace onClose={() => close.current()}>
-    {result.state === 'ready' ? <CustomerForm {...result.data} mode={mode} onClose={onClose} closeRef={close}
+    {result.state === 'ready' ? <CustomerForm {...result.data} mode={mode} canSave={props.canSave} onClose={onClose} closeRef={close}
       onSaved={(savedId, closeAfterSave) => {
         props.onSaved();
         if (closeAfterSave || (!id && !props.canEdit && !props.canView)) onClose();
@@ -45,8 +45,9 @@ export function CustomerEditor(props: EditorProps) {
   </Modal>;
 }
 
-function CustomerForm({ mode, detail, places, types, closeRef, onClose, onSaved }: {
+function CustomerForm({ mode, canSave, detail, places, types, closeRef, onClose, onSaved }: {
   mode: CustomerTarget['mode'];
+  canSave: boolean;
   onClose: () => void;
   onSaved: (id: number, closeAfterSave: boolean) => void;
   detail: CustomerDetail; places: Places; types: Array<{ id: number; name?: string | null }>;
@@ -58,7 +59,7 @@ function CustomerForm({ mode, detail, places, types, closeRef, onClose, onSaved 
   const form = useEditForm(detail);
   const v = form.values;
   const core = (key: string) => t(key, undefined, 'Core');
-  const editable = mode !== 'view';
+  const editable = canSave && mode !== 'view';
   const disabled = !editable || form.pending;
   const languages = [...new Set([v.language ?? '', 'en-US', 'tr-TR'])];
   const zones = [...new Set([v.timeZone ?? '', 'UTC', ...Intl.supportedValuesOf('timeZone')])];

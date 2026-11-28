@@ -30,7 +30,8 @@ export const deadlineFields = z.object({
 });
 export const sessionView = deadlineFields.extend({
   userId: z.number().int().positive(), customerId: z.number().int().nonnegative(),
-  userName: z.string(), displayName: z.string().nullish(), language: z.string(),
+  customerName: z.string().nullish(), userName: z.string(), nameSurname: z.string().nullish(),
+  displayName: z.string().nullish(), language: z.string(),
   timeZone: z.string(), isLimitedSession: z.boolean(), csrfToken: z.string().min(1),
 });
 export type SessionView = z.infer<typeof sessionView>;

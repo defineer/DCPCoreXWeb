@@ -15,8 +15,8 @@ import { getCustomerLicence, getCustomerLicenceChoices, saveCustomerLicence,
 
 const emptyChoices: CustomerLicenceChoices = { licences: [], licenceTypes: [] };
 
-export function CustomerLicenceEditor({ customerId, id, canEdit, onClose, onSaved }: {
-  customerId: number; id: number; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function CustomerLicenceEditor({ customerId, id, canEdit, canSave, onClose, onSaved }: {
+  customerId: number; id: number; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -27,17 +27,17 @@ export function CustomerLicenceEditor({ customerId, id, canEdit, onClose, onSave
   const load = useCallback(async (signal: AbortSignal) => {
     if (currentId && !canEdit) return { choices: emptyChoices, detail: created };
     const [choices, detail] = await Promise.all([
-      getCustomerLicenceChoices(http, customerId, currentId, signal),
+      canSave ? getCustomerLicenceChoices(http, customerId, currentId, signal) : Promise.resolve(emptyChoices),
       currentId ? getCustomerLicence(http, customerId, currentId, signal) : Promise.resolve(undefined),
     ]);
     return { choices, detail };
-  }, [http, customerId, currentId, canEdit, created]);
+  }, [http, customerId, currentId, canEdit, canSave, created]);
   const result = useResource(load);
   if (result.state !== 'ready') close.current = onClose;
   const name = t('Licence.CustomerLicence');
   return <Modal title={t(currentId ? 'Directory.Edit' : 'Directory.New', { name })} workspace onClose={() => close.current()}>
     {result.state === 'ready' ? <CustomerLicenceForm {...result.data} customerId={customerId}
-      editable={!currentId || canEdit} closeRef={close} onClose={onClose} onSaved={record => {
+      editable={canSave && (!currentId || canEdit)} closeRef={close} onClose={onClose} onSaved={record => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();
         else if (!currentId) setCreated(record);

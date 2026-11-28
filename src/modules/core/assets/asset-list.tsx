@@ -6,7 +6,7 @@ import type { RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -30,9 +30,10 @@ export function AssetList() {
   const core = (key: string) => t(key, undefined, 'Core');
   const title = core('Assets');
   const canView = canPage('WebAssetEdit') && canAction('WebAssetList', 'WebViewAsset');
+  const canOpenEditor = canPage('WebAssetEdit');
   const canSave = canAction('WebAssetEdit', 'WebSaveAsset');
-  const canAdd = canSave && canAction('WebAssetList', 'WebAddAsset');
-  const canEdit = canSave && canAction('WebAssetList', 'WebEditAsset');
+  const canAdd = canOpenEditor && canAction('WebAssetList', 'WebAddAsset');
+  const canEdit = canOpenEditor && canAction('WebAssetList', 'WebEditAsset');
   const canDelete = canAction('WebAssetList', 'WebDeleteAsset');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) => getAssets(http, status, assetType, signal), [http, assetType]);
   const loadTypes = useCallback((signal: AbortSignal) => getAssetTypes(http, signal), [http]);
@@ -94,9 +95,9 @@ export function AssetList() {
           { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
         onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {allowed && target && <AssetEditor target={target} canEdit={canEdit} onClose={() => setTarget(undefined)} onSaved={refresh} />}
+    {allowed && target && <AssetEditor target={target} canEdit={canEdit} canSave={canSave} onClose={() => setTarget(undefined)} onSaved={refresh} />}
   </Page>;
 }

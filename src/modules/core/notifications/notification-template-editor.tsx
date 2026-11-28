@@ -16,8 +16,8 @@ const emptyTemplate: TemplateDetail = {
   id: 0, templateTypeId: 0, isActive: true, isDeleted: false, templateLanguages: [], editable: true,
 };
 
-export function NotificationTemplateEditor({ target, canEdit, onClose, onSaved }: {
-  target: TemplateTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function NotificationTemplateEditor({ target, canEdit, canSave, onClose, onSaved }: {
+  target: TemplateTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -38,7 +38,7 @@ export function NotificationTemplateEditor({ target, canEdit, onClose, onSaved }
   const title = target.mode === 'view' ? target.row.templateName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal workspace title={title} onClose={() => close.current()}>
     {result.state === 'ready' ? <TemplateForm {...result.data}
-      editable={result.data.detail.editable && target.mode !== 'view' && (!id || canEdit)}
+      editable={canSave && (result.data.detail.editable && target.mode !== 'view' && (!id || canEdit))}
       onClose={onClose} closeRef={close} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

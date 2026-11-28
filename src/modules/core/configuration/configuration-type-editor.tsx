@@ -14,8 +14,8 @@ import { getConfigurationType, getConfigurationTypeChoices, saveConfigurationTyp
 export type ConfigurationTypeTarget = { mode: 'new' } | { mode: 'edit' | 'view'; row: ConfigurationTypeRow };
 const emptyType: ConfigurationType = { id: 0, isActive: true, isDeleted: false };
 
-export function ConfigurationTypeEditor({ target, canEdit, onClose, onSaved }: {
-  target: ConfigurationTypeTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function ConfigurationTypeEditor({ target, canEdit, canSave, onClose, onSaved }: {
+  target: ConfigurationTypeTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -35,7 +35,7 @@ export function ConfigurationTypeEditor({ target, canEdit, onClose, onSaved }: {
   const name = t('ConfigurationElementType', undefined, 'Core');
   const title = target.mode === 'view' ? target.row.typeName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal workspace title={title} onClose={() => close.current()}>
-    {result.state === 'ready' ? <TypeForm {...result.data} editable={target.mode !== 'view' && (!id || canEdit)}
+    {result.state === 'ready' ? <TypeForm {...result.data} editable={canSave && target.mode !== 'view' && (!id || canEdit)}
       closeRef={close} onClose={onClose} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

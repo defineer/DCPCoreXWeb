@@ -6,7 +6,7 @@ import { useWorkspace } from '@/app/workspace';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
 import { exportTable } from '@/shared/export';
-import { DataTable, ListPage, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, ListPage, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { LoadingRegion, Page, StatusPanel } from '@/shared/ui/page';
 import { Button, Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -96,7 +96,7 @@ function RuntimeDataList({ kind }: { kind: RuntimeKind }) {
         { value: 2, label: t('Runtime.Failed') }]} />}>
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
-          : <DataTable label={title} rows={rows} columns={columns} rowId={item => item.name} selected={selection}
+          : <PagedDataTable onPageChange={() => setSelection(undefined)} label={title} rows={rows} columns={columns} rowId={item => item.name} selected={selection}
             onSelect={item => setSelection(item.name)} resizable />}
       </LoadingRegion>
     </ListPage> : <StatusPanel kind="denied" />}

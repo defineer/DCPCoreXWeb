@@ -1,5 +1,30 @@
 # Core module migration progress
 
+## Blazor and React interaction audit on 28 November 2026
+
+The static inventory compared 67 in-scope Razor components across the feature groups below. The 31 Core route paths match exactly. The other 36 components map to dialogs, editors, or controls in those flows. The review also checked shared sign-in and account routes, application navigation, and the Blazor toolbar, modal, grid and Documents behavior. It compared Razor fields, grid columns and code-behind action handlers with React entry points and inspected owner contracts for the changes below. The [live verification log](core-live-verification.md) records runtime coverage separately.
+
+| Severity | React correction |
+| --- | --- |
+| High | Separated List New and Edit grants from editor Save for Assets, Configuration catalogs and schemas, Customers, Event definitions and mappings, JSON Objects, Licences and Customer Licences, Notifications and templates, Roles, Workgroups, Memberships, and individual Access Model grants. Each entry point still requires editor access. The editor is read-only without Save. Customer Administrator Setup keeps its existing authority requirement. |
+| Medium | Restored preference-based paging to the migrated flat lists, expandable trees, Workflow History, and Documents. Tree and SQL result grids retain their source pager placement. Event Records and My Sessions use the saved pager placement with their existing service paging. New client-side page selection clears record selection and preserves the export scope. |
+| Medium | Restored Documents metadata export for users with document View access. It exports the current record's visible attachment metadata, preserves exact document IDs, and offers XLSX, CSV and PDF. |
+| Medium | Restored the explicit Workflow Inbox Query action and the Workflow History state key in the grid and export. |
+| Low | My Sessions initializes dates in the user's configured time zone. A disabled toolbar group now also disables its open child commands. |
+
+### Cases requiring owner or product follow-up
+
+| Severity | Case | Current evidence or dependency |
+| --- | --- | --- |
+| High | Read-only editor requests | CoreService's Asset, Customer, Event, Licence and Customer Licence detail handlers now accept the Edit grant independently of Save. They retain the editor page grant, tenant scope and applicable parent checks. The Debug build and five browser fixtures passed. Signed-in verification with the limited grant set is tracked in the live verification log. |
+| High | Protected detail views | ReleaseTODO B12 requires Configuration, Event, and AIFramework to approve their field lists and record scopes. The inspected owner requirements defer those decisions. R6 still depends on those approvals, owner-side redaction and HTTPS staging verification. The current screens use metadata and Configuration's write-only replacement contract. |
+| Medium | Configured workflows and SQL | Workflow Open needs populated owner work items with supported destinations and valid record context. The last live Report check returned no configured browser connection. Both need owner-backed verification with suitable data. |
+| Medium | Optional applications | The prior signed-in audit found that AI Data Analytics and Collaboration led to Home with an empty sidebar. Their routes are outside the approved non-CMS Core migration. Confirm which application choices should appear for these deployments. |
+
+### Home summary follow-up
+
+CoreService now includes the signed-in customer's name and the user's full name in its browser session response. React Home uses those fields. The account menu continues to use the preferred display name. If the connected CoreService build does not supply the fields, Home shows a dash for each missing value. The [verification log](core-live-verification.md#home-summary-and-redacted-detail-review-on-28-november-2026) records the build and browser checks.
+
 The legacy inventory contains 67 non-CMS Razor components, including 31 routed pages. React registers all 31 routes. Related operations with outstanding work are listed below. CMS Management is outside this migration.
 
 ## Backlog status

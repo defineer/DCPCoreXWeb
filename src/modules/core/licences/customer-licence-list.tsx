@@ -4,7 +4,7 @@ import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page, StatusPanel } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
@@ -27,9 +27,10 @@ export function CustomerLicenceList({ customerId }: { customerId: number }) {
   const [busy, setBusy] = useState(false);
   const deleting = useRef(false);
   const canView = canPage('WebCustomerLicenceEdit') && canAction('WebCustomerLicenceList', 'WebViewCustomerLicence');
+  const canOpenEditor = canPage('WebCustomerLicenceEdit');
   const canSave = canAction('WebCustomerLicenceEdit', 'WebSaveCustomerLicence');
-  const canAdd = canSave && canAction('WebCustomerLicenceList', 'WebAddCustomerLicence');
-  const canEdit = canSave && canAction('WebCustomerLicenceList', 'WebEditCustomerLicence');
+  const canAdd = canOpenEditor && canAction('WebCustomerLicenceList', 'WebAddCustomerLicence');
+  const canEdit = canOpenEditor && canAction('WebCustomerLicenceList', 'WebEditCustomerLicence');
   const canDelete = canAction('WebCustomerLicenceList', 'WebDeleteCustomerLicence');
   const core = (key: string) => t(key, undefined, 'Core');
   const title = core('Licences');
@@ -79,12 +80,12 @@ export function CustomerLicenceList({ customerId }: { customerId: number }) {
           enabled, run: () => { if (row) setTarget(row); } },
       ];
     }}>
-      {rows => <DataTable label={title} columns={columns} rows={rows} rowId={row => row.id} resizable
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} columns={columns} rows={rows} rowId={row => row.id} resizable
         selected={selected} onSelect={canView || canEdit || canDelete ? row => select(row.id) : undefined} />}
     </RecordStatusResults>
     {target && canView && <LicenceDetail target={{ row: target, customerId }} onClose={() => setTarget(undefined)} />}
     {editor !== undefined && (editor ? canEdit : canAdd) && <CustomerLicenceEditor customerId={customerId} id={editor}
-      canEdit={canEdit} onClose={() => setEditor(undefined)} onSaved={refresh} />}
+      canEdit={canEdit} canSave={canSave} onClose={() => setEditor(undefined)} onSaved={refresh} />}
   </>;
 }
 

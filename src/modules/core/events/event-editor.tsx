@@ -17,8 +17,8 @@ const emptyEvent: EventRecord = {
   isSystemEvent: true, isActive: true, isDeleted: false,
 };
 
-export function EventEditor({ target, canEdit, onClose, onSaved }: {
-  target: EventTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function EventEditor({ target, canEdit, canSave, onClose, onSaved }: {
+  target: EventTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -38,7 +38,7 @@ export function EventEditor({ target, canEdit, onClose, onSaved }: {
   const name = t('Event', undefined, 'Core');
   const title = target.mode === 'view' ? target.row.eventName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal title={title} workspace onClose={() => close.current()}>
-    {result.state === 'ready' ? <EventForm {...result.data} editable={target.mode !== 'view' && (!id || canEdit)}
+    {result.state === 'ready' ? <EventForm {...result.data} editable={canSave && (target.mode !== 'view' && (!id || canEdit))}
       onClose={onClose} closeRef={close} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

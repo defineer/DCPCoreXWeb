@@ -3,7 +3,7 @@ import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import { recordStatus, type RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
 import { RecordStatusResults } from '@/shared/ui/record-status-results';
@@ -32,9 +32,10 @@ export function MembershipList<T extends Membership>({ title, operation, load, n
   const listPage = 'Web' + operation;
   const editorPage = 'Web' + permission + 'Edit';
   const grant = (action: string) => canAction(listPage, 'Web' + action + permission);
-  const canSave = canPage(editorPage) && canAction(editorPage, 'WebSave' + permission);
-  const canNew = canSave && grant('Add');
-  const canEdit = canSave && grant('Edit');
+  const canOpenEditor = canPage(editorPage);
+  const canSave = canAction(editorPage, 'WebSave' + permission);
+  const canNew = canOpenEditor && grant('Add');
+  const canEdit = canOpenEditor && grant('Edit');
   const canView = canPage(editorPage) && grant('View');
   const core = (key: string) => t(key, undefined, 'Core');
   const yesNo = (value: boolean) => core(value ? 'Yes' : 'No');
@@ -83,10 +84,10 @@ export function MembershipList<T extends Membership>({ title, operation, load, n
           run: () => { if (row) return remove(row); } },
       ];
     }}>
-      {rows => <DataTable label={title} columns={columns} rows={rows} rowId={row => row.id}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} columns={columns} rows={rows} rowId={row => row.id}
         selected={selectedId} onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {target && <MembershipEditor scope={scope} target={target} allowEdit={canEdit}
+    {target && <MembershipEditor scope={scope} target={target} allowEdit={canEdit} canSave={canSave}
       allowed={target.mode === 'new' ? canNew : target.mode === 'edit' ? canEdit : canView}
       onSaved={refresh} onClose={() => setTarget(undefined)} />}
   </>;

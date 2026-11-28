@@ -5,7 +5,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -42,9 +42,11 @@ export function CustomerList() {
   const types = useResource(loadTypes);
   const canLicences = common && canPage('WebCustomerLicenceList') && canAction('WebCustomerList', 'WebListCustomerLicences');
   const canView = canPage('WebCustomerEdit') && canAction('WebCustomerList', 'WebViewCustomer');
-  const canEdit = canAction('WebCustomerList', 'WebEditCustomer') && canAction('WebCustomerEdit', 'WebSaveCustomer');
-  const canAdd = common && canPage('WebCustomerEdit') && canAction('WebCustomerEdit', 'WebSaveCustomer')
-    && canAction('WebCustomerList', 'WebAddCustomer');
+  const canOpenEditor = canPage('WebCustomerEdit');
+  const canSave = canAction('WebCustomerEdit', 'WebSaveCustomer');
+  const canEdit = canOpenEditor && canAction('WebCustomerList', 'WebEditCustomer');
+  const canAdd = common && canOpenEditor && canAction('WebCustomerList', 'WebAddCustomer');
+  const canManageSetup = canAdd && canSave;
   const canDelete = canAction('WebCustomerList', 'WebDeleteCustomer');
   const columns = [
     { key: 'id', title: core('Id'), render: row => row.id, numeric: true },
@@ -97,20 +99,20 @@ export function CustomerList() {
           { key: 'WebListCustomerLicences', label: core('Licences'), icon: <ClipboardList />,
             allowed: canLicences, enabled, run: () => { if (row) setLicences(row); } },
           { key: 'administrator-setup', label: t('Customer.AdministratorSetup'), icon: <UserCog aria-hidden="true" />,
-            allowed: canAdd, enabled, run: () => { if (row) setSetup(row); } },
+            allowed: canManageSetup, enabled, run: () => { if (row) setSetup(row); } },
           exportAction(rows, !busy),
         ];
       }}>
-      {rows => <DataTable label={title} columns={columns} rows={rows} rowId={row => row.id}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} columns={columns} rows={rows} rowId={row => row.id}
         selected={selectedId} onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
     {target && (target.mode === 'new' ? canAdd : target.mode === 'edit' ? canEdit : canView) &&
-      <CustomerEditor target={target} canEdit={canEdit} canView={canView}
+      <CustomerEditor target={target} canEdit={canEdit} canSave={canSave} canView={canView}
         onClose={() => setTarget(undefined)} onSaved={refresh} />}
     {licences && canLicences && <Modal title={(licences.customerName || String(licences.id)) + ' - ' + core('Licences')}
       workspace onClose={() => setLicences(undefined)}>
       <CustomerLicenceList customerId={licences.id} />
     </Modal>}
-    {setup && canAdd && <CustomerAdministratorSetup customer={setup} onClose={() => setSetup(undefined)} />}
+    {setup && canManageSetup && <CustomerAdministratorSetup customer={setup} onClose={() => setSetup(undefined)} />}
   </Page>;
 }

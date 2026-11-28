@@ -1,5 +1,46 @@
 # CoreService live verification
 
+## Home summary and redacted detail review on 28 November 2026
+
+### Home checks
+
+The CoreService Debug build passed with zero warnings or errors. React production build, TypeScript and lint passed. Five Chrome fixtures passed. The focused Home case verified that Home displays the signed-in customer's name and the user's full name when the account display name differs. The four route fixtures covered mobile portrait, short landscape, tablet and desktop. These fixtures simulated owner responses. The isolated CoreService build still requires a signed-in local browser retest.
+
+### Protected detail review
+
+ReleaseTODO B12 and R6 remain open. No approved field list or record-scope contract for the protected projections was found in the owner requirements or the release record. B12 requires three owner approvals before extending the browser responses. No changes to the protected projections or HTTPS staging claims were made in this pass.
+
+## CoreService Edit without Save retest on 28 November 2026
+
+### Backend and fixture checks
+
+CoreService Debug compiled with zero warnings and errors. The diff review confirmed that the five detail reads still require the editor page and an authorized list action. Common-customer restrictions for Event and Licence Edit, Customer tenant scope, and Customer Licence parent access and record matching remain enforced. Save endpoints and Save-dependent licence lookups retain their original grants.
+
+Five Chrome fixtures used an authenticated common-customer session with Edit and editor access and without View or Save. Asset, Customer, Event, Licence and Customer Licence each loaded an existing record, displayed a read-only field, and omitted the Save button. The fixtures simulated owner responses.
+
+### Signed-in checks
+
+The isolated Debug build and the Chrome fixtures provide build and UI evidence. Signed-in verification against that build requires a local account with the five Edit grants, the corresponding page grants, the Customer Licences parent action, and no editor Save grants. The earlier Administrator session used broader grants and does not establish this result.
+
+## Interaction audit retest on 28 November 2026
+
+### Signed-in checks
+
+The Turkish Administrator session in the VS Code integrated browser loaded the current React development build at `http://127.0.0.1:5174`. The React sign-in page returned HTTP 200 and a separate anonymous call to `/api/session` returned HTTP 401. The local CoreService and six direct browser owner ports were reachable.
+
+| Surface | Observed result |
+| --- | --- |
+| Workflow Inbox | The explicit Query button was enabled after loading. Running the Active query returned the empty grid with the localized Workgroup column. The empty Inbox prevented live History, Open, and transition verification. |
+| User Edit and Documents | The User List loaded current records. Selecting a user enabled Edit and the editor opened. Documents loaded the existing attachment and displayed its metadata. The Export menu showed XLSX, CSV and PDF. |
+| Role Management and My Sessions | Role Management rendered live roles and the New action. My Sessions loaded its query and results. The Administrator had full access, so the read-only Role grant combination was exercised in the browser fixtures. |
+| Runtime Tables and Agent Dashboard | Runtime Tables opened. Agent Dashboard loaded its registration list and displayed the empty result returned by Agent Service. |
+
+Signed-in request status codes were outside the captured browser observations. The retest submitted no business writes and downloaded no live files. It sampled the changed flows and supplements the earlier signed-in route audit below. Populated Workflow actions, Report SQL execution, limited-grant owner behavior and Release/HTTPS remain pending.
+
+### Fixture checks
+
+The production build, TypeScript, lint and all 18 unit tests passed. The Chrome suite passed 107 cases in the full run. The four new Role cases passed on a focused rerun after their test selectors were corrected. The verified sizes were 320 × 640, 568 × 320, 768 × 1024 and 1440 × 900. The fixtures covered the read-only New and Edit forms, pager placement, selection reset, Workflow History state key, and a generated Documents CSV containing the exact 64-bit document ID and authorized metadata. The Chrome suite used mocked owner responses.
+
 The React development server forwarded browser requests to CoreService on port 9100. These checks used a signed-in browser session and made no changes to application records.
 
 | Screen | Observed failure | Root cause and fix | Live retest |

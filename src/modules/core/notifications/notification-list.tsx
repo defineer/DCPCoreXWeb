@@ -5,7 +5,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
@@ -29,9 +29,10 @@ export function NotificationList() {
   const title = t('Notification.Definitions');
   const page = 'WebNotificationList';
   const editor = 'WebNotificationEdit';
-  const canSave = canPage(editor) && canAction(editor, 'WebSaveNotification');
-  const canAdd = canSave && canAction(page, 'WebAddNotification');
-  const canEdit = canSave && canAction(page, 'WebEditNotification');
+  const canOpenEditor = canPage(editor);
+  const canSave = canAction(editor, 'WebSaveNotification');
+  const canAdd = canOpenEditor && canAction(page, 'WebAddNotification');
+  const canEdit = canOpenEditor && canAction(page, 'WebEditNotification');
   const canView = canPage(editor) && canAction(page, 'WebViewNotification');
   const canDelete = canAction(page, 'WebDeleteNotification');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) => getNotifications(http, status, signal), [http]);
@@ -91,10 +92,10 @@ export function NotificationList() {
           { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
         onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {allowed && target && <NotificationEditor target={target} canEdit={canEdit}
+    {allowed && target && <NotificationEditor target={target} canEdit={canEdit} canSave={canSave}
       onClose={() => setTarget(undefined)} onSaved={refresh} />}
   </Page>;
 }

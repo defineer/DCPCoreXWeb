@@ -5,11 +5,12 @@ import { downloadFile } from '../http';
 import { useGlobalization } from '../globalization';
 import { useResource } from '../resource';
 import { Button, Modal, WorkspaceIcon } from './primitives';
-import { DataTable } from './data-table';
+import { PagedDataTable } from './data-table';
 import { StatusPanel } from './page';
 import { useDialogManager } from './dialog-manager';
+import { useTableExport } from './table-export-action';
 import { toast } from './toasts';
-import { ToolbarBar } from './toolbar';
+import { Toolbar } from './toolbar';
 
 type DocumentPermissions = { view: boolean; upload: boolean; delete: boolean };
 type PreviewKind = 'image' | 'pdf' | 'text';
@@ -114,28 +115,33 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
     }, true);
   }
   const core = (key: string) => t(key, undefined, 'Core');
+  const metadataColumns = [
+    { key: 'id', title: core('Id'), render: (row: ObjectDocument) => row.documentId },
+    { key: 'name', title: core('Name'), render: (row: ObjectDocument) => row.documentName },
+    { key: 'fileType', title: core('FileType'), render: (row: ObjectDocument) => row.documentFileTypeName ?? '' },
+    { key: 'type', title: core('Type'), render: (row: ObjectDocument) => row.documentTypeName ?? '' },
+    { key: 'description', title: core('Description'), render: (row: ObjectDocument) => row.description ?? '' },
+  ];
+  const exportMetadata = useTableExport('documents', metadataColumns);
+  const rows = result.state === 'ready' ? result.data : [];
   return <Modal title={t('Common.Documents')} onClose={() => { if (!commandInFlight.current) onClose(); }}>
-    <ToolbarBar>
-      {canList && <Button variant="ghost" disabled={pending || result.state === 'loading'} onClick={result.refresh}>
-        <WorkspaceIcon name="refresh" />{core('Refresh')}
-      </Button>}
-      {allow.upload && <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><Upload size={16} />{t('Common.Upload')}
-        <input type="file" className="min-w-0 max-w-full" disabled={pending} accept={operations.extensions.join(',')} multiple
-          onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; upload(files); }} />
-      </label>}
-    </ToolbarBar>
+    {canList && <Toolbar operation="ObjectDocuments" actions={[
+      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />,
+        enabled: !pending && result.state !== 'loading', run: result.refresh },
+      { ...exportMetadata(rows, !pending), allowed: allow.view },
+    ]} />}
+    {allow.upload && <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><Upload size={16} />{t('Common.Upload')}
+      <input type="file" className="min-w-0 max-w-full" disabled={pending} accept={operations.extensions.join(',')} multiple
+        onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; upload(files); }} />
+    </label>}
     <ul aria-live="polite" className="break-all text-sm">
       {uploadResults.map(({ name, message }, index) => <li key={index}><b>{name}</b> · {message}</li>)}
     </ul>
     {canList && result.state === 'loading' && <StatusPanel kind="loading" />}
     {result.state === 'error' && <StatusPanel kind="error" error={result.error} retry={result.refresh} />}
     {canList && result.state === 'ready' &&
-      <DataTable label={t('Common.Documents')} rows={result.data} rowId={row => row.documentId} columns={[
-        { key: 'id', title: core('Id'), render: row => row.documentId },
-        { key: 'name', title: core('Name'), render: row => row.documentName },
-        { key: 'fileType', title: core('FileType'), render: row => row.documentFileTypeName },
-        { key: 'type', title: core('Type'), render: row => row.documentTypeName },
-        { key: 'description', title: core('Description'), render: row => row.description },
+      <PagedDataTable label={t('Common.Documents')} rows={rows} rowId={row => row.documentId} columns={[
+        ...metadataColumns,
         { key: 'actions', title: t('Common.Actions'), render: row => <div className="flex flex-wrap gap-1">
           {allow.view && <>
             <Button disabled={pending} onClick={() => download(row, true)} aria-label={t('Common.Preview')}><WorkspaceIcon name="view" /></Button>

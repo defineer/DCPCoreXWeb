@@ -6,7 +6,7 @@ import { exportTable } from '@/shared/export';
 import { useEditForm, useFormStateService, type FormErrors } from '@/shared/forms';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { DefinitionList, PageGroup, StatusPanel } from '@/shared/ui/page';
 import { Button, CheckField, Field, FormGroup, Modal, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -36,9 +36,10 @@ export function EventNotificationDialog({ event, onClose }: { event: EventRow; o
   const title = core('Notifications');
   const eventName = event.eventName?.trim() || String(event.id);
   const authorized = canPage(page) && canAction('WebEventList', 'WebListEventNotifications');
-  const canSave = canPage(editor) && canAction(editor, 'WebSaveEventNotification');
-  const canAdd = canSave && event.isActive && canAction(page, 'WebAddEventNotification');
-  const canEdit = canSave && canAction(page, 'WebEditEventNotification');
+  const canOpenEditor = canPage(editor);
+  const canSave = canAction(editor, 'WebSaveEventNotification');
+  const canAdd = canOpenEditor && event.isActive && canAction(page, 'WebAddEventNotification');
+  const canEdit = canOpenEditor && canAction(page, 'WebEditEventNotification');
   const canView = canPage(editor) && canAction(page, 'WebViewEventNotification');
   const canDelete = canAction(page, 'WebDeleteEventNotification');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) =>
@@ -96,16 +97,16 @@ export function EventNotificationDialog({ event, onClose }: { event: EventRow; o
             } })) },
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
         onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults> : <StatusPanel kind="denied" />}
     {authorized && allowed && target && <MappingEditor eventId={event.id} eventName={eventName} target={target}
-      canEdit={canEdit} onClose={() => setTarget(undefined)} onSaved={refresh} />}
+      canEdit={canEdit} canSave={canSave} onClose={() => setTarget(undefined)} onSaved={refresh} />}
   </Modal>;
 }
 
-function MappingEditor({ eventId, eventName, target, canEdit, onClose, onSaved }: {
-  eventId: number; eventName: string; target: MappingTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+function MappingEditor({ eventId, eventName, target, canEdit, canSave, onClose, onSaved }: {
+  eventId: number; eventName: string; target: MappingTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -128,7 +129,7 @@ function MappingEditor({ eventId, eventName, target, canEdit, onClose, onSaved }
   return <Modal workspace title={title} onClose={() => close.current()}>
     {result.state === 'ready' ? <MappingForm {...result.data} eventName={eventName}
       currentName={target.mode === 'new' ? undefined : target.row.notificationName}
-      editable={target.mode !== 'view' && (!id || canEdit)} onClose={onClose} closeRef={close} onSaved={value => {
+      editable={canSave && target.mode !== 'view' && (!id || canEdit)} onClose={onClose} closeRef={close} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();
         else if (!id) setCreated(value);

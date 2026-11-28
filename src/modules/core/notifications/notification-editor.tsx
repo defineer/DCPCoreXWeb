@@ -15,8 +15,8 @@ const emptyNotification: NotificationRecord = {
   id: 0, isActive: true, isDeleted: false, notificationItems: [],
 };
 
-export function NotificationEditor({ target, canEdit, onClose, onSaved }: {
-  target: NotificationTarget; canEdit: boolean; onClose: () => void; onSaved: () => void;
+export function NotificationEditor({ target, canEdit, canSave, onClose, onSaved }: {
+  target: NotificationTarget; canEdit: boolean; canSave: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { http } = useSession();
   const { t } = useGlobalization();
@@ -37,7 +37,7 @@ export function NotificationEditor({ target, canEdit, onClose, onSaved }: {
   const title = target.mode === 'view' ? target.row.notificationName || name : t(id ? 'Directory.Edit' : 'Directory.New', { name });
   return <Modal workspace title={title} onClose={() => close.current()}>
     {result.state === 'ready' ? <NotificationForm {...result.data}
-      editable={target.mode !== 'view' && (!id || canEdit)}
+      editable={canSave && (target.mode !== 'view' && (!id || canEdit))}
       onClose={onClose} closeRef={close} onSaved={value => {
         onSaved();
         if (preferences?.saveAndCloseBehaviour) onClose();

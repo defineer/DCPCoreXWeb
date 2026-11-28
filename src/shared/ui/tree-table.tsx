@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { DataTable, type Column } from './data-table';
+import { PagedDataTable, type Column } from './data-table';
 import { Button } from './primitives';
 
 interface TreeRow<T> { value: T; depth: number; hasChildren: boolean }
@@ -35,9 +35,9 @@ function visibleRows<T>(rows: T[], rowId: (row: T) => number, parentId: (row: T)
   return visible;
 }
 
-export function TreeTable<T>({ label, rows, columns, rowId, parentId, nameColumn, selected, onSelect }: {
+export function TreeTable<T>({ label, rows, columns, rowId, parentId, nameColumn, selected, onSelect, onPageChange }: {
   label: string; rows: T[]; columns: Column<T>[]; rowId: (row: T) => number; parentId: (row: T) => number;
-  nameColumn: string; selected?: number; onSelect?: (row: T) => void;
+  nameColumn: string; selected?: number; onSelect?: (row: T) => void; onPageChange?: () => void;
 }) {
   const [expanded, setExpanded] = useState(new Set<number>());
   const treeColumns: Column<TreeRow<T>>[] = columns.map(column => ({
@@ -60,6 +60,6 @@ export function TreeTable<T>({ label, rows, columns, rowId, parentId, nameColumn
     },
   }));
 
-  return <DataTable label={label} columns={treeColumns} rows={visibleRows(rows, rowId, parentId, expanded)}
+  return <PagedDataTable pagerPosition="Top" onPageChange={onPageChange} label={label} columns={treeColumns} rows={visibleRows(rows, rowId, parentId, expanded)}
     rowId={row => rowId(row.value)} selected={selected} onSelect={onSelect && (row => onSelect(row.value))} resizable />;
 }

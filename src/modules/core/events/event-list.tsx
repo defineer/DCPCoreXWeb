@@ -6,7 +6,7 @@ import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { Page } from '@/shared/ui/page';
 import { WorkspaceIcon } from '@/shared/ui/primitives';
@@ -32,9 +32,10 @@ export function EventList() {
   const title = core('Events');
   const common = state.stage === 'authenticated' && state.session.customerId === 0;
   const canView = canPage('WebEventEdit') && canAction('WebEventList', 'WebViewEvent');
-  const canSave = common && canAction('WebEventEdit', 'WebSaveEvent');
-  const canAdd = canSave && canAction('WebEventList', 'WebAddEvent');
-  const canEdit = canSave && canAction('WebEventList', 'WebEditEvent');
+  const canOpenEditor = common && canPage('WebEventEdit');
+  const canSave = canAction('WebEventEdit', 'WebSaveEvent');
+  const canAdd = canOpenEditor && canAction('WebEventList', 'WebAddEvent');
+  const canEdit = canOpenEditor && canAction('WebEventList', 'WebEditEvent');
   const canDelete = common && canAction('WebEventList', 'WebDeleteEvent');
   const canListNotifications = canPage('WebEventNotificationList') && canAction('WebEventList', 'WebListEventNotifications');
   const load = useCallback((status: RecordStatus, signal: AbortSignal) => getEvents(http, status, signal), [http]);
@@ -95,10 +96,10 @@ export function EventList() {
           { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
         ];
       }}>
-      {rows => <DataTable label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
+      {rows => <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={row => row.id} selected={selection}
         onSelect={row => select(row.id)} resizable />}
     </RecordStatusResults>
-    {allowed && target && <EventEditor target={target} canEdit={canEdit} onClose={() => setTarget(undefined)} onSaved={refresh} />}
+    {allowed && target && <EventEditor target={target} canEdit={canEdit} canSave={canSave} onClose={() => setTarget(undefined)} onSaved={refresh} />}
     {notificationEvent && <EventNotificationDialog event={notificationEvent} onClose={() => setNotificationEvent(undefined)} />}
   </Page>;
 }

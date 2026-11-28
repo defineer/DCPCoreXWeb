@@ -11,8 +11,8 @@ import type { DirectoryDetail } from './directory-contract';
 
 export type DirectoryEditorTarget = { mode: 'new'; initial: DirectoryDetail } | { mode: 'edit'; id: number };
 
-export function DirectoryEditorDialog({ target, noun, allowNew, allowEdit, load, save, onSaved, onClose }: {
-  target: DirectoryEditorTarget; noun: string; allowNew: boolean; allowEdit: boolean;
+export function DirectoryEditorDialog({ target, noun, allowNew, allowEdit, canSave, load, save, onSaved, onClose }: {
+  target: DirectoryEditorTarget; noun: string; allowNew: boolean; allowEdit: boolean; canSave: boolean;
   load: (id: number, signal: AbortSignal) => Promise<DirectoryDetail>;
   save: (value: DirectoryDetail) => Promise<number>; onSaved: () => void; onClose: () => void;
 }) {
@@ -30,15 +30,15 @@ export function DirectoryEditorDialog({ target, noun, allowNew, allowEdit, load,
 
   return <Modal title={title} workspace onClose={() => close.current()}>
     {!permitted ? <StatusPanel kind="denied" /> : result.state === 'ready' && result.data
-      ? <DirectoryEditorForm initial={result.data} allowNew={allowNew} allowEdit={allowEdit} save={save}
+      ? <DirectoryEditorForm initial={result.data} allowNew={allowNew} allowEdit={allowEdit} canSave={canSave} save={save}
         onSaved={() => { setCreated(true); onSaved(); }} onClose={onClose} closeRef={close} />
       : result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : <StatusPanel kind="loading" />}
   </Modal>;
 }
 
-function DirectoryEditorForm({ initial, allowNew, allowEdit, save, onSaved, onClose, closeRef }: {
-  initial: DirectoryDetail; allowNew: boolean; allowEdit: boolean; save: (value: DirectoryDetail) => Promise<number>;
+function DirectoryEditorForm({ initial, allowNew, allowEdit, canSave, save, onSaved, onClose, closeRef }: {
+  initial: DirectoryDetail; allowNew: boolean; allowEdit: boolean; canSave: boolean; save: (value: DirectoryDetail) => Promise<number>;
   onSaved: () => void; onClose: () => void; closeRef: { current: () => void };
 }) {
   const { t, date, error } = useGlobalization();
@@ -46,7 +46,7 @@ function DirectoryEditorForm({ initial, allowNew, allowEdit, save, onSaved, onCl
   const form = useEditForm(initial);
   const value = form.values;
   const core = (key: string) => t(key, undefined, 'Core');
-  const writable = value.id > 0 ? allowEdit : allowNew;
+  const writable = canSave && (value.id > 0 ? allowEdit : allowNew);
   const disabled = !writable || form.pending;
   closeRef.current = () => { void form.requestClose(onClose); };
 

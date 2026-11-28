@@ -18,7 +18,7 @@ const transition = z.object({
   workflowTypeStateTransitionId: z.number().int(), stateName: text, stateKeyName: text, isDefault: z.boolean(),
 });
 const history = z.object({
-  workflowAction: z.union([z.string(), z.number()]), stateName: text, startDate: z.string(), userName: text,
+  workflowAction: z.union([z.string(), z.number()]), stateName: text, stateKeyName: text, startDate: z.string(), userName: text,
   responsibleRoleName: text, responsibleWorkgroupName: text, executedByUserName: text, description: text,
 });
 export type WorkflowInboxItem = z.infer<typeof status>;

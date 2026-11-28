@@ -4,7 +4,7 @@ import { useWorkspace } from '@/app/workspace';
 import { useEditForm, useFormStateService, type FormErrors } from '@/shared/forms';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { LoadingRegion, StatusPanel } from '@/shared/ui/page';
 import { Button, Field, FormGroup, Modal, TextAreaField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -90,7 +90,7 @@ export function RuntimeItems({ kind, name, onClose, onChanged }: {
       ]} />
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
-          : <DataTable label={name} rows={rows} columns={columns} rowId={item => item.key} selected={selected}
+          : <PagedDataTable onPageChange={() => select(undefined)} label={name} rows={rows} columns={columns} rowId={item => item.key} selected={selected}
             onSelect={item => select(item.key)} resizable />}
       </LoadingRegion>
       {permittedTarget && target && <RuntimeItemEditor target={target} kind={kind} name={name}

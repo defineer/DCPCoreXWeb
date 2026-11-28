@@ -6,7 +6,7 @@ import { recordStatus, type RecordStatus } from '@/shared/contracts';
 import { exportTable } from '@/shared/export';
 import { useGlobalization } from '@/shared/globalization';
 import { useResource } from '@/shared/resource';
-import { DataTable, ListPage, type Column } from '@/shared/ui/data-table';
+import { PagedDataTable, ListPage, type Column } from '@/shared/ui/data-table';
 import { useDialogManager } from '@/shared/ui/dialog-manager';
 import { LoadingRegion, Page, StatusPanel } from '@/shared/ui/page';
 import { Button, Field, SelectField, WorkspaceIcon } from '@/shared/ui/primitives';
@@ -37,9 +37,10 @@ export function JsonObjectList() {
   const deleting = useRef(false);
   const core = (key: string) => t(key, undefined, 'Core');
   const title = t('JsonObject.Management');
-  const canSave = canPage(editor) && canAction(editor, 'WebSaveJsonObject');
-  const canAdd = canSave && canAction(page, 'WebAddJsonObject');
-  const canEdit = canSave && canAction(page, 'WebEditJsonObject');
+  const canOpenEditor = canPage(editor);
+  const canSave = canAction(editor, 'WebSaveJsonObject');
+  const canAdd = canOpenEditor && canAction(page, 'WebAddJsonObject');
+  const canEdit = canOpenEditor && canAction(page, 'WebEditJsonObject');
   const canView = canPage(editor) && canAction(page, 'WebViewJsonObject');
   const canDelete = canAction(page, 'WebDeleteJsonObject');
   const loadTypes = useCallback((signal: AbortSignal) => getJsonTypes(http, signal), [http]);
@@ -127,11 +128,11 @@ export function JsonObjectList() {
       </form>}>
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
-          : <DataTable label={title} rows={rows} columns={columns} rowId={item => item.id} selected={selected}
+          : <PagedDataTable onPageChange={() => select(undefined)} label={title} rows={rows} columns={columns} rowId={item => item.id} selected={selected}
             onSelect={item => select(item.id)} resizable />}
       </LoadingRegion>
     </ListPage>
-    {targetAllowed && target && <JsonObjectEditor target={target} types={typeRows} canEdit={canEdit}
+    {targetAllowed && target && <JsonObjectEditor target={target} types={typeRows} canEdit={canEdit} canSave={canSave}
       onClose={() => setTarget(undefined)} onSaved={() => { if (criteria) result.refresh(); else setCriteria({ ...draft }); }} />}
   </Page>;
 }
