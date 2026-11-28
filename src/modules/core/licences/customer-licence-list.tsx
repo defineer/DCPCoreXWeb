@@ -75,7 +75,7 @@ export function CustomerLicenceList({ customerId }: { customerId: number }) {
         { key: 'WebDeleteCustomerLicence', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled, run: () => { if (row) return remove(row); } },
         exportAction(rows, !busy),
-        { key: 'WebViewCustomerLicence', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: 'WebViewCustomerLicence', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled, run: () => { if (row) setTarget(row); } },
       ];
     }}>

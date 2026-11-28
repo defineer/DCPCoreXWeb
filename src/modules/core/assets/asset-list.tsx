@@ -82,7 +82,7 @@ export function AssetList() {
             run: () => { if (row) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDeleteAsset', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete, enabled,
             run: () => { if (row) return remove(row); } },
-          { key: 'WebViewAsset', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView, enabled,
+          { key: 'WebViewAsset', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView, enabled,
             run: () => { if (row) setTarget({ mode: 'view', row }); } },
           { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0 && !busy,
             actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {

@@ -75,7 +75,7 @@ export function NotificationList() {
             run: () => { if (row) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDeleteNotification', label: core('Delete'), icon: <WorkspaceIcon name="delete" />,
             allowed: canDelete, enabled: Boolean(row) && !busy, run: () => row && remove(row) },
-          { key: 'WebViewNotification', label: core('View'), icon: <WorkspaceIcon name="info" />,
+          { key: 'WebViewNotification', label: core('View'), icon: <WorkspaceIcon name="view" />,
             allowed: canView, enabled: Boolean(row) && !busy,
             run: () => { if (row) setTarget({ mode: 'view', row }); } },
           { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0 && !busy,

@@ -81,12 +81,12 @@ export function RuntimeItems({ kind, name, onClose, onChanged }: {
           enabled: !busy, run: () => setTarget({ mode: 'new' }) },
         { key: 'WebEdit' + suffix, label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'edit', row }); } },
-        { key: 'WebView' + suffix, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: 'WebView' + suffix, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'view', row }); } },
         { key: 'WebDelete' + suffix, label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled: Boolean(row) && !busy, run: () => row && remove(row) },
         exportAction(rows, !busy),
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
       ]} />
       <LoadingRegion loading={result.state === 'loading'}>
         {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />

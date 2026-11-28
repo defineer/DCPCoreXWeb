@@ -72,7 +72,7 @@ export function LicenceList() {
         { key: 'WebDeleteLicence', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled, run: () => { if (row) return remove(row); } },
         exportAction(rows, !busy),
-        { key: 'WebViewLicence', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: 'WebViewLicence', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled, run: () => { if (row) setTarget(row); } },
       ];
     }}>

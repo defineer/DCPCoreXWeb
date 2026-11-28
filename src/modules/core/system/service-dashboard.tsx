@@ -71,7 +71,7 @@ export function ServiceDashboard() {
 
   return <Page id="ServiceDashboard" title={t('Service.Dashboard')}>
     <Toolbar operation="ServiceDashboard" actions={[
-      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh, enabled: common },
+      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh, enabled: common },
       { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
     ]} />
     {common ? <>

@@ -96,7 +96,7 @@ function ElementForm({ detail, choices, tree, parentName, editable, closeRef, on
         <WorkspaceIcon name="save" />{core('Save')}
       </Button>}
       <Button variant="ghost" className="workspace-toolbar-button" disabled={form.pending} onClick={closeRef.current}>
-        <WorkspaceIcon name="back" />{core('Close')}
+        <WorkspaceIcon name="close" />{core('Close')}
       </Button>
     </ToolbarBar>
     <FormGroup title={core('General')}>

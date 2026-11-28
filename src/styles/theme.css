@@ -100,7 +100,7 @@
   --sidebar-active-text: #fff;
 }
 @layer base {
-  body { @apply m-0 min-w-[320px] bg-background text-foreground font-sans text-base; }
+  body { @apply m-0 bg-background text-foreground font-sans text-base; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-ring; }
   :where(button, a, select) { -webkit-tap-highlight-color: transparent; }
   button:not(:disabled) { cursor: pointer; }
@@ -276,11 +276,7 @@
 .workspace-toolbar .workspace-toolbar-button:disabled { opacity: .45; }
 @layer components {
   .workspace-icon {
-    @apply inline-block size-6 shrink-0;
-    background-color: currentColor;
-    mask-position: center;
-    mask-repeat: no-repeat;
-    mask-size: contain;
+    @apply size-6 shrink-0;
   }
 }
 .workspace-toolbar-button svg, .workspace-search svg { width: 24px; height: 24px; flex-shrink: 0; }

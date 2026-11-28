@@ -61,7 +61,7 @@ export function WorkflowInbox() {
         { key: 'WebOpenWorkflowObject', label: t('Workflow.Open'), allowed: canAction(page, 'WebOpenWorkflowObject'),
           enabled: Boolean(url), run: () => { if (url) navigate(url); } },
         ...workflow.toolbarActions,
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
         { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {
             try {

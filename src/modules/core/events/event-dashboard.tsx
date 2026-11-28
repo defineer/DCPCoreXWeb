@@ -26,7 +26,7 @@ export function EventDashboard() {
     !max || row.count > max.count ? row : max, undefined);
   return <Page id="EventDashboard" title={t('Event.Dashboard')}>
     <Toolbar operation="EventDashboard" actions={[
-      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
       { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
     ]} />
     <PageGroup title={core('Query')}><DashboardRangeField range={range} onChange={setRange} /></PageGroup>

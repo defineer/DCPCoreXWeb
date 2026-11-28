@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { chromium, expect, test, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 const future = '2099-01-01T00:00:00Z';
@@ -784,6 +784,30 @@ async function expectNoPageOverflow(page: Page, width: number) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 }
 
+test('keeps page and grid scrolling separate with a 15 px scrollbar at 320 px', async ({ baseURL, channel }) => {
+  const browser = await chromium.launch({ channel, ignoreDefaultArgs: ['--hide-scrollbars'] });
+  try {
+    const page = await browser.newPage({ baseURL, viewport: { width: 320, height: 640 } });
+    await mockApi(page);
+    await page.goto('/userlistpage');
+    await expect(page.getByRole('heading', { name: 'Users List' })).toBeVisible();
+    await page.addStyleTag({ content: 'html { overflow-y: scroll } html::-webkit-scrollbar { width: 15px }' });
+
+    const availableWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(availableWidth).toBe(305);
+    await expectNoPageOverflow(page, availableWidth);
+
+    const grid = page.locator('.workspace-table');
+    await expect(grid.getByRole('row')).toHaveCount(2);
+    await expectWithinViewport(grid, { width: availableWidth, height: 640 });
+    await grid.press('ArrowRight');
+    await expect.poll(() => grid.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+    await expectNoPageOverflow(page, availableWidth);
+  } finally {
+    await browser.close();
+  }
+});
+
 for (const viewport of responsiveSizes) {
   test(`fits every signed-in route and its available menus on ${viewport.name}`, async ({ page }) => {
     await mockApi(page, { top: viewport.name === 'mobile' });
@@ -835,7 +859,7 @@ for (const viewport of responsiveSizes) {
       await navigation.locator('summary').first().click();
       await expectWithinViewport(navigation.getByRole('link', { name: 'User Management' }), viewport, true);
       await navigation.locator('summary').first().click();
-      await navigation.locator('summary[aria-label="Configuration"]').click();
+      await navigation.locator('summary[aria-label="Configuration Management"]').click();
       await expectWithinViewport(navigation.getByRole('link', { name: 'Customer Management' }), viewport, true);
       await expectNoPageOverflow(page, viewport.width);
     }
@@ -1613,7 +1637,7 @@ test('uses the Blazor palette, page structure, and hover states', async ({ page 
   }
   await expect(activeMenu).toHaveCSS('background-color', 'rgb(112, 56, 173)');
   const newButton = page.getByRole('button', { name: 'New', exact: true });
-  await expect(newButton.locator('.workspace-icon')).toHaveCSS('background-color', 'rgb(69, 33, 112)');
+  await expect(newButton.locator('svg.lucide-plus[aria-hidden="true"]')).toHaveCSS('stroke', 'rgb(69, 33, 112)');
   const row = page.getByRole('row', { name: /Grace Hopper/ });
   await row.hover();
   await expect(row).toHaveCSS('background-color', 'rgb(232, 221, 242)');

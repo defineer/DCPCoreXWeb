@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { ListTree } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
@@ -46,7 +47,9 @@ export function ConfigurationTypeList() {
       renderEditor={(target, canEdit, close, refresh) =>
         <ConfigurationTypeEditor target={target} canEdit={canEdit} onClose={close} onSaved={refresh} />}
       onClose={() => navigate('/index')}
-      related={canViewSchemas ? { open: setSchemaType, key: schemaAction, label: core('Schema') } : undefined} />
+      related={canViewSchemas ? {
+        open: setSchemaType, key: schemaAction, label: core('Schema'), icon: <ListTree aria-hidden="true" />,
+      } : undefined} />
       : <StatusPanel kind="denied" />}
     {common && canViewSchemas && schemaType &&
       <TypeSchemas key={schemaType.id} type={schemaType} onClose={() => setSchemaType(undefined)} />}

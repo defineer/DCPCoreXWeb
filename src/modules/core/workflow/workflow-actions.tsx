@@ -94,7 +94,7 @@ function WorkflowHistory({ http, workflowObjectId, onClose }: {
   const columns: Column<(typeof rows)[number]>[] = historyColumns.map(({ value, ...column }) => ({ ...column, render: value }));
   return <Modal workspace title={title} onClose={onClose}>
     <Toolbar operation="WorkflowHistory" actions={[
-      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />,
+      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />,
         enabled: result.state !== 'loading', run: result.refresh },
       { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
         actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {

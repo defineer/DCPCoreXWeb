@@ -186,7 +186,7 @@ function AccessModelResults({ scope, initial, status, editable, canSave, canView
   });
   const actions: ToolbarAction[] = [
     { key: 'edit', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canSave && !editable, run: onEdit },
-    { key: 'WebViewAccessModel', label: core('View'), icon: <WorkspaceIcon name="info" />,
+    { key: 'WebViewAccessModel', label: core('View'), icon: <WorkspaceIcon name="view" />,
       allowed: canView && !editable, enabled: Boolean(selected), run: () => { if (selected) open({ row: selected, mode: 'view' }); } },
     { key: 'WebEditAccessModel', label: t('AccessModel.EditSelected'), icon: <WorkspaceIcon name="edit" />,
       allowed: canEdit && !editable, enabled: Boolean(selected), run: () => { if (selected) open({ row: selected, mode: 'edit' }); } },
@@ -198,7 +198,7 @@ function AccessModelResults({ scope, initial, status, editable, canSave, canView
     { key: 'cancel', label: core('Cancel'), allowed: editable, enabled: !form.pending,
       run: () => form.requestClose(onCancel) },
     { ...exportAction(initial), allowed: !editable },
-    { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />,
+    { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />,
       enabled: !form.pending, run: () => form.requestClose(onRefresh) },
   ];
   return <ListPage resultsTitle={title} tools={<Toolbar operation="AccessModelTreeList" actions={actions} />}

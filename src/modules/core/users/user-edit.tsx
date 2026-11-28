@@ -104,7 +104,7 @@ function UserEditForm({ original, places, mode, onClose, onSaved, closeHook }: {
       {!readOnly && <Button type="submit" variant="ghost" className="workspace-toolbar-button" disabled={form.pending}><WorkspaceIcon name="save" />{t('Save', undefined, 'Core')}</Button>}
       {canDocuments && <DocumentsToolbarButton allow={allows} disabled={form.pending} onOpen={() => setDocumentsOpen(true)} />}
       <Button variant="ghost" className="workspace-toolbar-button" disabled={form.pending} onClick={() => void form.requestClose(onClose)}>
-        <WorkspaceIcon name="back" />{t('Close', undefined, 'Core')}
+        <WorkspaceIcon name="close" />{t('Close', undefined, 'Core')}
       </Button>
     </ToolbarBar>
     <div className="workspace-profile-groups workspace-fields">

@@ -19,7 +19,7 @@ export function CatalogList<T extends { id: number }>({ title, subject, filename
   name: (row: T) => string; load: (status: RecordStatus, signal: AbortSignal) => Promise<T[]>;
   allowAdd?: boolean; onRemove: (row: T) => Promise<void>; onClose?: () => void;
   renderEditor: (target: CatalogTarget<T>, canEdit: boolean, close: () => void, refresh: () => void) => ReactNode;
-  related?: { open: (row: T) => void; key: string; label: string };
+  related?: { open: (row: T) => void; key: string; label: string; icon: ReactNode };
   editorPage?: string; saveAction?: string; requiresParent?: (row: T) => boolean;
   treeParent?: (row: T) => number; filters?: ReactNode;
 }) {
@@ -75,9 +75,9 @@ export function CatalogList<T extends { id: number }>({ title, subject, filename
             enabled, run: () => { if (row) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDelete' + subject, label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
             enabled, run: () => row && remove(row) },
-          { key: 'WebView' + subject, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+          { key: 'WebView' + subject, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
             enabled, run: () => { if (row) setTarget({ mode: 'view', row }); } },
-          ...(related ? [{ key: related.key, label: related.label, icon: <WorkspaceIcon name="info" />,
+          ...(related ? [{ key: related.key, label: related.label, icon: related.icon,
             enabled, run: () => { if (row) related.open(row); } }] : []),
           { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0 && !busy,
             actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, UserCog } from 'lucide-react';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
 import type { RecordStatus } from '@/shared/contracts';
@@ -88,7 +88,7 @@ export function CustomerList() {
         return [
           { key: 'WebAddCustomer', label: core('New'), icon: <WorkspaceIcon name="add" />, allowed: canAdd, enabled: !busy,
             run: () => setTarget({ mode: 'new' }) },
-          { key: 'WebViewCustomer', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView, enabled,
+          { key: 'WebViewCustomer', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView, enabled,
             run: () => { if (row) setTarget({ row, mode: 'view' }); } },
           { key: 'WebEditCustomer', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit, enabled,
             run: () => { if (row) setTarget({ row, mode: 'edit' }); } },
@@ -96,7 +96,7 @@ export function CustomerList() {
             run: () => { if (row) return remove(row); } },
           { key: 'WebListCustomerLicences', label: core('Licences'), icon: <ClipboardList />,
             allowed: canLicences, enabled, run: () => { if (row) setLicences(row); } },
-          { key: 'administrator-setup', label: t('Customer.AdministratorSetup'), icon: <WorkspaceIcon name="info" />,
+          { key: 'administrator-setup', label: t('Customer.AdministratorSetup'), icon: <UserCog aria-hidden="true" />,
             allowed: canAdd, enabled, run: () => { if (row) setSetup(row); } },
           exportAction(rows, !busy),
         ];

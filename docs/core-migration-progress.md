@@ -120,3 +120,17 @@ The running local application opened all 31 registered Core routes in the Admini
 The separate Chrome fixture run passed all 101 tests, including the four viewport sizes. The React production build and all 18 unit tests also passed.
 
 The follow-up fixed text attachment preview and the Turkish Configuration, Notification and Workflow workgroup labels. The signed-in live retest passed for all four reported issues. Fourteen focused Chrome fixtures separately verified the preview and related navigation and Workflow paths, including responsive preview coverage. [Live retest details](core-live-verification.md#text-preview-and-turkish-label-retest)
+
+## Standard Lucide icons
+
+React renders the approved Lucide mappings for standard toolbar, form, dialog and navigation icons under WEB-065. Record View uses Eye. Administrator Setup, Configuration Versions and Schema, Queue Items, and Runtime Table Rows each have an icon for their action. A left arrow marks a return to the workspace, and an X marks dialog dismissal. DCP branding and domain-specific artwork are preserved.
+
+TypeScript, ESLint, the React production build, and all 18 unit tests passed. The Chrome fixture for toolbar appearance verifies that a Lucide icon inherits the Blazor palette on hover. [Live verification status](core-live-verification.md#standard-lucide-icon-replacement)
+
+Chrome fixtures covered routes, navigation, toolbars, grids, and reachable dialogs at 320 × 640, 568 × 320, 768 × 1024, and 1440 × 900. The first run passed 104 of 106 cases. Both remaining cases passed individually after the mobile navigation fixture was updated to use the current Configuration Management label and the mobile Access Model fixture was rerun after a browser page setup timeout.
+
+The signed-in desktop retest verified the outline icons and DCP branding in the sidebar and header menus, User List and editor, Documents dialog, Customer Management and Agent Dashboard. [Signed-in observations](core-live-verification.md#signed-in-desktop-retest-on-28-november-2026)
+
+The live mobile viewport retest covered signed-in User List and Customer Management at 320 × 640 and 568 × 320. Menus, toolbar actions, and dialogs were usable, and DCP branding remained visible. The live log records the 320 px viewport caveat for desktop scrollbars that reserve layout space. [Mobile retest](core-live-verification.md#signed-in-mobile-viewport-retest-on-28-november-2026)
+
+Removing the fixed 320 px minimum from the body eliminated the page-level horizontal overflow when a vertical scrollbar reserves 15 px. The Chrome fixture reproduced a 320 px document in 305 px of available width before the fix and verified that the fixed document fits while the grid still scrolls. The signed-in retest confirmed the result on both mobile orientations. [Overflow retest](core-live-verification.md#retest-after-the-320-px-overflow-fix)

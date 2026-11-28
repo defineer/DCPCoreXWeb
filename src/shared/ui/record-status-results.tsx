@@ -31,7 +31,7 @@ export function RecordStatusResults<T>({ title, operation, load, actions, childr
     </RecordStatusQuery>}
       tools={<Toolbar operation={operation} actions={[
         ...(actions?.(rows, status) ?? []),
-        { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+        { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
       ]} />}>
       {result.state === 'error' ? <StatusPanel kind="error" error={result.error} retry={result.refresh} />
         : children(rows)}

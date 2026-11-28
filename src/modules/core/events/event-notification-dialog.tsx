@@ -85,7 +85,7 @@ export function EventNotificationDialog({ event, onClose }: { event: EventRow; o
             enabled, run: () => { if (row) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDeleteEventNotification', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
             enabled, run: () => row && remove(row) },
-          { key: 'WebViewEventNotification', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+          { key: 'WebViewEventNotification', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
             enabled, run: () => { if (row) setTarget({ mode: 'view', row }); } },
           { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0 && !busy,
             actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {
@@ -174,7 +174,7 @@ function MappingForm({ detail, choices, eventName, currentName, editable, closeR
       {editable && <Button type="submit" variant="ghost" className="workspace-toolbar-button"
         disabled={form.pending || !form.dirty || v.isDeleted}><WorkspaceIcon name="save" />{core('Save')}</Button>}
       <Button variant="ghost" className="workspace-toolbar-button" disabled={form.pending} onClick={closeRef.current}>
-        <WorkspaceIcon name="back" />{core('Close')}
+        <WorkspaceIcon name="close" />{core('Close')}
       </Button>
     </ToolbarBar>
     <FormGroup title={core('General')}>

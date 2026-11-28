@@ -79,7 +79,7 @@ export function EventList() {
             run: () => { if (row) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDeleteEvent', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete, enabled,
             run: () => { if (row) return remove(row); } },
-          { key: 'WebViewEvent', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView, enabled,
+          { key: 'WebViewEvent', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView, enabled,
             run: () => { if (row) setTarget({ mode: 'view', row }); } },
           { key: 'WebListEventNotifications', label: core('Notifications'), icon: <Bell size={16} />,
             allowed: canListNotifications, enabled: enabled && (common || row?.isSystemEvent === false),

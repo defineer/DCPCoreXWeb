@@ -76,7 +76,7 @@ export function NotificationTemplateList() {
             run: () => { if (row?.editable) setTarget({ mode: 'edit', row }); } },
           { key: 'WebDeleteNotificationTemplate', label: core('Delete'), icon: <WorkspaceIcon name="delete" />,
             allowed: canDelete, enabled: Boolean(row?.editable) && !busy, run: () => row && remove(row) },
-          { key: 'WebViewNotificationTemplate', label: core('View'), icon: <WorkspaceIcon name="info" />,
+          { key: 'WebViewNotificationTemplate', label: core('View'), icon: <WorkspaceIcon name="view" />,
             allowed: canView, enabled: Boolean(row) && !busy,
             run: () => { if (row) setTarget({ mode: 'view', row }); } },
           { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0 && !busy,

@@ -1,7 +1,10 @@
 import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { X } from 'lucide-react';
+import {
+  ArrowLeft, CircleUserRound, Eye, FileDown, LayoutGrid, PanelsTopLeft, Pencil, Plus,
+  RefreshCw, Save, Search, Trash2, X,
+} from 'lucide-react';
 import { cn } from './utils';
 import { useGlobalization } from '../globalization';
 
@@ -20,9 +23,25 @@ export function Button({ className, variant, type = 'button', ...props }:
   return <button type={type} className={cn(buttonVariants({ variant }), className)} {...props} />;
 }
 
-export function WorkspaceIcon({ name, className }: { name: string; className?: string }) {
-  return <span aria-hidden="true" className={cn('workspace-icon', className)}
-    style={{ maskImage: `url(/images/${name}.svg)` }} />;
+const workspaceIcons = {
+  account: CircleUserRound,
+  add: Plus,
+  applications: LayoutGrid,
+  back: ArrowLeft,
+  close: X,
+  delete: Trash2,
+  edit: Pencil,
+  export: FileDown,
+  page: PanelsTopLeft,
+  refresh: RefreshCw,
+  save: Save,
+  search: Search,
+  view: Eye,
+};
+
+export function WorkspaceIcon({ name, className }: { name: keyof typeof workspaceIcons; className?: string }) {
+  const Icon = workspaceIcons[name];
+  return <Icon aria-hidden="true" className={cn('workspace-icon', className)} />;
 }
 
 export const controlClass = 'workspace-control min-h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground';
@@ -102,7 +121,8 @@ export function Modal({ title, description, children, onClose, workspace }: {
           <div><Dialog.Title className="line-clamp-2" title={title}>{title}</Dialog.Title>
             <Dialog.Description className={description ? 'text-sm font-normal' : 'sr-only'}>{description ?? title}</Dialog.Description></div>
           <Button variant="ghost" aria-label={t('Close', undefined, 'Core')} onClick={onClose}
-            className="absolute top-0.5 right-1 min-h-7 px-1.5 hover:bg-primary-hover hover:text-primary-hover-foreground"><X /></Button>
+            title={t('Close', undefined, 'Core')}
+            className="absolute top-0.5 right-1 min-h-7 px-1.5 hover:bg-primary-hover hover:text-primary-hover-foreground"><WorkspaceIcon name="close" /></Button>
         </div>
         <div className={workspace ? 'workspace-page-body' : 'workspace-popup-body'}>{children}</div>
       </Dialog.Content>

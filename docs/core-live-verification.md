@@ -186,3 +186,38 @@ Live outcomes above are based on rendered responses through the running React pr
 Reloaded the running React app on port 5174 in the Turkish Administrator session. User Edit → Documents → Preview opened the existing `Notes.txt` attachment and rendered its text. Escape closed the preview and returned to the Documents list. The sidebar displayed **Yapılandırma Yönetimi** and **Uyarı Yönetimi**, and both groups expanded to show their links. Workflow Inbox loaded and displayed **Çalışma Grubu** as its workgroup column header. Live service results were observed in the browser.
 
 Separately, all 14 focused Chrome fixtures passed, including text preview on mobile portrait, short landscape, tablet and desktop. The preview cases used the browser download contract's octet-stream MIME type and verified that HTML-like content remains literal, long lines wrap, the dialog scrolls, and Close stays reachable. The production build, TypeScript, targeted ESLint and all 18 unit tests passed.
+
+### Standard Lucide icon replacement
+
+The React development origin on port 5174 was listening, and CoreService and the local independent owners had no listeners on their configured ports. Signed-in service verification was unavailable for the icon replacement. Browser fixtures used mocked owner responses. This change did not alter the service routes or action handlers.
+
+#### Signed-in desktop retest on 28 November 2026
+
+After the local services were started, the existing Turkish Administrator session in the VS Code integrated browser rendered these screens against the running backend.
+
+| Surface | Observed result |
+| --- | --- |
+| Workspace navigation | The sidebar page icons aligned consistently with their labels and followed the purple hover and white selected states. The application picker and account menu opened with their new outline icons. The DCP wordmark, footer, and purple palette remained visible. |
+| User List and editor | Live rows loaded. Selecting a row enabled Edit, Delete and View. New and Edit opened their dialogs. Save and the dialog X were visually distinct from the list toolbar's return arrow. Dialogs closed without submitting changes. |
+| User Edit Documents | The live attachment list loaded. Refresh, Preview, Download and the dialog Close icon were visible and aligned. |
+| Customer Management | The live list loaded. The FileDown icon opened the XLSX, CSV and PDF options. The distinct Administrator Setup icon opened the live setup status dialog. |
+| Agent Dashboard | Refresh and Close used the same glyphs as the other page toolbars. Refresh completed and the service returned the empty state with zero agents. |
+
+These observations cover representative desktop screens and live responses rendered by React. Per-request HTTP statuses and mobile live layouts were not inspected. Prior Chrome fixtures cover the four responsive sizes. No records were saved or deleted, no setup retry was submitted, and no files were exported.
+
+#### Signed-in mobile viewport retest on 28 November 2026
+
+The existing Turkish Administrator session in the VS Code integrated Chromium browser loaded the live User List and Customer Management in same-origin viewports at 320 × 640 and 568 × 320 CSS pixels. Both showed records returned by the running backend. Per-request HTTP statuses were not captured.
+
+- The drawer, application picker, and account menu opened at both sizes. The landscape account menu scrolled to its last entries. The DCP wordmark, footer, purple headers, and selected navigation styling remained visible.
+- Toolbar icons and labels wrapped together. Customer Export showed XLSX, CSV and PDF at both sizes. Both Customer grids scrolled horizontally inside their grid containers.
+- New User showed Save and Close, with the header X still visible after scrolling the form body at both sizes. Administrator Setup showed live status and closed with the header X in both viewports.
+- With page scrollbars configured to reserve no layout space for the mobile simulation, document scroll width matched viewport width on both tested pages. With the desktop renderer's reserved scrollbar, a 320 px frame had 305 px available for the document and showed 15 px of page-level horizontal overflow. The 568 px frame had no page-level horizontal overflow with either setting.
+
+No physical handset was used. No saves, deletes, provisioning retries, or exports were submitted.
+
+#### Retest after the 320 px overflow fix
+
+The shared body style now follows the available document width. In the signed-in Chromium session, User List and Customer Management had matching available and document scroll widths with the real desktop scrollbars present: 305 px at 320 × 640 and 553 px at 568 × 320. The Customer grid scrolled independently to reveal its rightmost columns at both sizes. The drawer retained the DCP wordmark, footer, and purple theme. The account and Export menus fit, and the New User dialog scrolled with its Lucide close control still reachable.
+
+The live retest used the running backend and made no record changes. No physical handset was used.

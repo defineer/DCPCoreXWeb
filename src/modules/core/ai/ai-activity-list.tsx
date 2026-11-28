@@ -71,9 +71,9 @@ export function AiActivityList() {
   return <Page id="AICommandActivityList" title={title}>
     <ListPage resultsTitle={title}
       tools={<Toolbar operation="AICommandActivityList" actions={[
-        { key: view, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canAction(page, view),
+        { key: view, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canAction(page, view),
           enabled: rows.some(item => item.id === selected), run: () => setOpened(selected) },
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, enabled: Boolean(applied), run: result.refresh },
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, enabled: Boolean(applied), run: result.refresh },
         { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {
             try {

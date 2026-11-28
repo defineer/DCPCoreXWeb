@@ -1,7 +1,7 @@
-import { Printer, RefreshCw } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useGlobalization } from '../globalization';
-import { Panel, SelectField } from './primitives';
+import { Panel, SelectField, WorkspaceIcon } from './primitives';
 import { Toolbar, type ToolbarAction } from './toolbar';
 import { DataTable } from './data-table';
 
@@ -23,7 +23,7 @@ export function DashboardToolbar({ range, changeRange, dashboardId, dashboards, 
         onChange={value => changeRange(value as DashboardRange)} />
     </div>
     <Toolbar operation="Dashboard" actions={[
-      ...(refresh ? [{ key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <RefreshCw />, run: refresh }] : []),
+      ...(refresh ? [{ key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="refresh" />, run: refresh }] : []),
       ...(print ? [{ key: 'print', label: t('Common.Print'), icon: <Printer />, run: print }] : []),
       ...actions,
     ]} />

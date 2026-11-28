@@ -115,7 +115,7 @@ export function SecurityDirectoryList<T extends DirectoryRow>({ pageKey, operati
           run: () => { if (row) setEditor({ mode: 'edit', id: row.id }); } },
         { key: 'delete', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete, enabled: Boolean(manageable) && !busy,
           run: () => { if (row) return remove(row); } },
-        { key: details.grant, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: details.grant, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled: Boolean(row), run: () => { if (row) setDetail(row); } },
         { key: usersAction, label: core('Users'), icon: <UsersRound />, allowed: users, enabled: Boolean(row),
           run: () => { if (row) setRelated({ kind: 'users', row }); } },

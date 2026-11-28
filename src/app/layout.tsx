@@ -96,7 +96,7 @@ export function TopMenu() {
   }
   return <details className="relative min-w-0">
     <summary aria-label={name} className={cn(summary, headerItemHover)}>
-      <WorkspaceIcon name="account/user" />
+      <WorkspaceIcon name="account" />
       <span className="hidden max-w-36 truncate sm:block">{name}</span><ChevronDown className="size-3.5" />
     </summary>
     <div className={cn(popup, 'right-0')}>
@@ -123,7 +123,7 @@ export function AppMenu() {
   }
   return <details className="relative">
     <summary className={cn(summary, headerItemHover)} aria-label={t('App.Choose')}>
-      <WorkspaceIcon name="products" /><span className="hidden md:block">{t('App.Choose')}</span>
+      <WorkspaceIcon name="applications" /><span className="hidden md:block">{t('App.Choose')}</span>
       <ChevronDown className="size-3.5" />
     </summary>
     <div className={cn(popup, 'right-0')}>
@@ -170,7 +170,7 @@ function NavEntries({ entries, layout, nested = false }: {
     {entries.map(entry => {
       const labelKey = entry.page?.label ?? moduleLabels.get(entry.key ?? '');
       const label = labelKey ? t(labelKey) : entry.label;
-      const icon = entry.page ? <WorkspaceIcon name="gridlist" className="size-5" /> : <Shield className="size-4 shrink-0" />;
+      const icon = entry.page ? <WorkspaceIcon name="page" className="size-5" /> : <Shield className="size-4 shrink-0" />;
       const iconOnly = layout === 'collapsed' && !nested;
       const linkClass = layout === 'left' || iconOnly
         ? 'flex min-h-[2.4rem] items-center gap-3 px-3 text-sm text-sidebar-foreground aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-text'

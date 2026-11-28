@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Eye, Files, Trash2, Upload } from 'lucide-react';
+import { Download, Files, Upload } from 'lucide-react';
 import type { DocumentOperations, ObjectDocument } from '../document-operations';
 import { downloadFile } from '../http';
 import { useGlobalization } from '../globalization';
@@ -117,7 +117,7 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
   return <Modal title={t('Common.Documents')} onClose={() => { if (!commandInFlight.current) onClose(); }}>
     <ToolbarBar>
       {canList && <Button variant="ghost" disabled={pending || result.state === 'loading'} onClick={result.refresh}>
-        <WorkspaceIcon name="arrow-sync" />{core('Refresh')}
+        <WorkspaceIcon name="refresh" />{core('Refresh')}
       </Button>}
       {allow.upload && <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><Upload size={16} />{t('Common.Upload')}
         <input type="file" className="min-w-0 max-w-full" disabled={pending} accept={operations.extensions.join(',')} multiple
@@ -138,11 +138,11 @@ export function ObjectDocuments({ operations, allow, onClose, onChanged }: {
         { key: 'description', title: core('Description'), render: row => row.description },
         { key: 'actions', title: t('Common.Actions'), render: row => <div className="flex flex-wrap gap-1">
           {allow.view && <>
-            <Button disabled={pending} onClick={() => download(row, true)} aria-label={t('Common.Preview')}><Eye /></Button>
+            <Button disabled={pending} onClick={() => download(row, true)} aria-label={t('Common.Preview')}><WorkspaceIcon name="view" /></Button>
             <Button disabled={pending} onClick={() => download(row, false)} aria-label={t('Common.Download')}><Download /></Button>
           </>}
           {allow.delete && <Button disabled={pending} onClick={() => remove(row)} variant="destructive"
-            aria-label={t('Delete', undefined, 'Core')}><Trash2 /></Button>}
+            aria-label={t('Delete', undefined, 'Core')}><WorkspaceIcon name="delete" /></Button>}
         </div> },
       ]} />}
     {preview && <DocumentPreview file={preview} close={() => setPreview(undefined)} />}

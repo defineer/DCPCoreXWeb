@@ -28,7 +28,7 @@ function Dashboard({ kind }: { kind: AiDashboard['kind'] }) {
   const core = (key: string) => t(key, undefined, 'Core');
   return <Page id={kind === 'framework' ? 'AIFrameworkDashboard' : 'AIProviderDashboard'} title={label}>
     <Toolbar operation={label} actions={[
-      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+      { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
       { key: 'close', label: core('Close'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
     ]} />
     <PageGroup title={core('Query')}><DashboardRangeField range={range} onChange={setRange} /></PageGroup>

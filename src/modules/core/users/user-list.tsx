@@ -94,7 +94,7 @@ export function UserList() {
     { key: 'new', label: t('New', undefined, 'Core'), icon: <WorkspaceIcon name="add" />, allowed: canEditPage && allow(userActions.new), enabled: !busy, run: () => open('new') },
     { key: 'edit', label: t('Edit', undefined, 'Core'), icon: <WorkspaceIcon name="edit" />, allowed: canEditPage && allow(userActions.edit), enabled: !!selected && !busy, run: () => open('edit') },
     { key: 'delete', label: t('Delete', undefined, 'Core'), icon: <WorkspaceIcon name="delete" />, allowed: allow(userActions.delete), enabled: !!selected && !busy && status !== recordStatus.deleted, run: remove },
-    { key: 'view', label: t('View', undefined, 'Core'), icon: <WorkspaceIcon name="info" />, allowed: canEditPage && allow(userActions.view), enabled: !!selected && !busy, run: () => open('view') },
+    { key: 'view', label: t('View', undefined, 'Core'), icon: <WorkspaceIcon name="view" />, allowed: canEditPage && allow(userActions.view), enabled: !!selected && !busy, run: () => open('view') },
     ...(['roles', 'accessModels'] as const).map((kind: UserRelatedPage) => {
       const relatedPage = userRelatedPages[kind];
       const Icon = relatedIcons[kind];
@@ -106,7 +106,7 @@ export function UserList() {
     }),
     { key: 'export', label: t('Export', undefined, 'Core'), accessibleLabel: t('Common.Export'), icon: <WorkspaceIcon name="export" />, allowed: allowedExport, enabled: rows.length > 0 && !busy,
       actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: () => exportResults(format) })) },
-    { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="arrow-sync" />, enabled: !busy, run: result.refresh },
+    { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="refresh" />, enabled: !busy, run: result.refresh },
     { key: 'close', label: t('Close', undefined, 'Core'), icon: <WorkspaceIcon name="back" />, enabled: !busy, run: () => navigate('/index') },
   ];
   const pagerPosition = workspace.preferences?.gridPagerPosition;

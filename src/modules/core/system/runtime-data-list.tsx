@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { ListOrdered, Rows3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
@@ -68,7 +69,8 @@ function RuntimeDataList({ kind }: { kind: RuntimeKind }) {
   return <Page id={page} title={title}>
     {common ? <ListPage resultsTitle={title}
       tools={<Toolbar operation={page} actions={[
-        { key: openAction, label: core(cache ? 'View' : queue ? 'Items' : 'Rows'), icon: <WorkspaceIcon name="info" />,
+        { key: openAction, label: core(cache ? 'View' : queue ? 'Items' : 'Rows'),
+          icon: cache ? <WorkspaceIcon name="view" /> : queue ? <ListOrdered aria-hidden="true" /> : <Rows3 aria-hidden="true" />,
           allowed: action(openAction) && canPage(relatedPage), enabled: row?.canAccess === true,
           run: () => { if (row?.canAccess) setOpened(row); } },
         { key: 'WebMoveQueue', label: core('Move'), allowed: queue && action('WebMoveQueue') && canPage('WebQueueMove'),
@@ -77,7 +79,7 @@ function RuntimeDataList({ kind }: { kind: RuntimeKind }) {
           enabled: row?.canAccess === true, run: () => mutate('delete') },
         { key: clearAction, label: core('Clear'), allowed: action(clearAction),
           enabled: cache ? result.state === 'ready' && result.data.canClear : row?.canAccess === true, run: () => mutate('clear') },
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
         { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {
             try {

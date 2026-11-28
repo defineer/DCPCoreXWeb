@@ -75,7 +75,7 @@ export function MembershipList<T extends Membership>({ title, operation, load, n
           allowed: canNew, enabled: !busy, run: () => setTarget({ mode: 'new' }) },
         { key: 'edit', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'edit', id: row.id, name: name(row) }); } },
-        { key: 'view', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: 'view', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'view', id: row.id, name: name(row) }); } },
         exportAction(rows, !busy),
         { key: 'delete', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: grant('Delete'),

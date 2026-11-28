@@ -60,7 +60,7 @@ export function SessionsPage() {
     <ListPage split resultsTitle={title} tools={<Toolbar operation="MySessions" actions={[
       { key: 'export', label: t('Export', undefined, 'Core'), accessibleLabel: t('Common.Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
         actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: () => exportResults(format) })) },
-      { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="arrow-sync" />, run: result.refresh },
+      { key: 'refresh', label: t('Refresh', undefined, 'Core'), icon: <WorkspaceIcon name="refresh" />, run: result.refresh },
       { key: 'close', label: t('Close', undefined, 'Core'), icon: <WorkspaceIcon name="back" />, run: () => navigate('/index') },
     ]} />} query={<form noValidate className="workspace-fields grid gap-3" onSubmit={event => {
       event.preventDefault();

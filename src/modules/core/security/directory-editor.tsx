@@ -71,7 +71,7 @@ function DirectoryEditorForm({ initial, allowNew, allowEdit, save, onSaved, onCl
         <WorkspaceIcon name="save" />{core('Save')}
       </Button>}
       <Button variant="ghost" className="workspace-toolbar-button" disabled={form.pending} onClick={() => void form.requestClose(onClose)}>
-        <WorkspaceIcon name="back" />{core('Close')}
+        <WorkspaceIcon name="close" />{core('Close')}
       </Button>
     </ToolbarBar>
     <FormGroup title={core('General')}>

@@ -86,11 +86,11 @@ export function JsonObjectList() {
           enabled: types.state === 'ready' && !busy, run: () => setTarget({ mode: 'new', selectedType: typeId }) },
         { key: 'WebEditJsonObject', label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'edit', row }); } },
-        { key: 'WebViewJsonObject', label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: 'WebViewJsonObject', label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ mode: 'view', row }); } },
         { key: 'WebDeleteJsonObject', label: core('Delete'), icon: <WorkspaceIcon name="delete" />, allowed: canDelete,
           enabled: Boolean(row) && !busy, run: () => row && remove(row) },
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />, enabled: Boolean(criteria),
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />, enabled: Boolean(criteria),
           run: result.refresh },
         { key: 'export', label: core('Export'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {

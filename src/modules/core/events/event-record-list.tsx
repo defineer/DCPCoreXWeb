@@ -121,10 +121,10 @@ export function EventRecordList() {
   return <Page id="EventObjectList" title={t('Event.RecordSearch')}>
     <ListPage resultsTitle={core('EventRecords')}
       tools={<Toolbar operation="EventObjectList" actions={[
-        { key: viewAction, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+        { key: viewAction, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
           enabled: rows.some(row => row.eventKey === selected),
           run: () => { if (rows.some(row => row.eventKey === selected)) setOpenedKey(selected); } },
-        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="arrow-sync" />,
+        { key: 'refresh', label: core('Refresh'), icon: <WorkspaceIcon name="refresh" />,
           enabled: Boolean(criteria) && result.state !== 'loading', run: () => { select(undefined); result.refresh(); } },
         { key: 'export', label: t('Event.ExportPage'), icon: <WorkspaceIcon name="export" />, enabled: rows.length > 0,
           actions: (['xlsx', 'csv', 'pdf'] as const).map(format => ({ key: format, label: format.toUpperCase(), run: async () => {

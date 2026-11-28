@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { useWorkspace } from '@/app/workspace';
@@ -63,7 +64,9 @@ function ElementCatalog({ tree }: { tree: boolean }) {
           name={row => row.elementName || String(row.id)} onRemove={row => deleteConfigurationElement(http, tree, row.id)}
           renderEditor={(target, canEdit, close, refresh) => <ConfigurationElementEditor target={target} tree={tree}
             choices={choices.data} canEdit={canEdit} onClose={close} onSaved={refresh} />}
-          related={canListVersions ? { open: setVersionElement, key: versions, label: core('Versions') } : undefined}
+          related={canListVersions ? {
+            open: setVersionElement, key: versions, label: core('Versions'), icon: <History aria-hidden="true" />,
+          } : undefined}
           filters={!tree && <SelectField label={core('Type')} value={typeId} onChange={value => setTypeId(Number(value))}
             options={[{ value: 0, label: core('All') }, ...choices.data.types.map(type => ({
               value: type.id, label: type.name || String(type.id),
@@ -138,7 +141,7 @@ function ConfigurationVersionDialog({ tree, element, onClose }: {
         return [
           { key: addAction, label: core('New'), icon: <WorkspaceIcon name="add" />, allowed: canAdd,
             enabled: element.isActive && !busy, run: () => setTarget({ id: 0, mode: 'new' }) },
-          { key: viewAction, label: core('View'), icon: <WorkspaceIcon name="info" />, allowed: canView,
+          { key: viewAction, label: core('View'), icon: <WorkspaceIcon name="view" />, allowed: canView,
             enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ id: row.id, mode: 'view' }); } },
           { key: editAction, label: core('Edit'), icon: <WorkspaceIcon name="edit" />, allowed: canEdit,
             enabled: Boolean(row) && !busy, run: () => { if (row) setTarget({ id: row.id, mode: 'edit' }); } },
